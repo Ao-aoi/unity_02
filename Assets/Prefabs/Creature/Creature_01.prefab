@@ -1483,5 +1483,6 @@ MonoBehaviour:
   fieldOfViewAngle: 30
   sightLineRenderer: {fileID: 7010102514150227361}
   lineSegments: 20
+  lockOnLineRenderer: {fileID: 8133486123703673292}
   dirToClosestFood: {x: 0, y: 0}
   distanceToClosestFood: 1
