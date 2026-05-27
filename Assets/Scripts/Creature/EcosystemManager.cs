@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq; // ★リストをスコア順に並び替えるために必要
-
+namespace Neuro.Creature{
 public class EcosystemManager : MonoBehaviour
 {
     public static event Action<float> CreatureDied;
@@ -120,4 +120,5 @@ public class EcosystemManager : MonoBehaviour
         // 新しい遺伝子を持って生まれ変わる
         SpawnNewCreature(nextGenome);
     }
+}
 }

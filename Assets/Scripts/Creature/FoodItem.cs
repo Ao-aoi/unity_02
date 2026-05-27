@@ -1,5 +1,6 @@
 using UnityEngine;
 
+namespace Neuro.Creature{
 public class FoodItem : MonoBehaviour
 {
     [Header("エサの設定")]
@@ -28,4 +29,5 @@ public class FoodItem : MonoBehaviour
             Destroy(gameObject);
         }
     }
+}
 }

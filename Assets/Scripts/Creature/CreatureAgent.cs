@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+namespace Neuro.Creature{   
 public class CreatureAgent : MonoBehaviour
 {
     [Header("ステータス")]
@@ -163,4 +163,5 @@ public class CreatureAgent : MonoBehaviour
         }
         return null;
     }
+}
 }

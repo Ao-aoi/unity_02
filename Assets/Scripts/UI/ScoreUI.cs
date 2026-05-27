@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
-
+using Neuro.Creature;
 public class ScoreUI : MonoBehaviour
 {
     [Header("グラフのパーツ設定")]
@@ -15,6 +16,27 @@ public class ScoreUI : MonoBehaviour
     public Color lineColor = Color.white;
     public float lineWidth = 3f;
     public float dotSize = 8f;
+
+    [Header("動作設定")]
+    [Tooltip("グラフに保持する最大データ点数。これを超えたら古いデータから削除されます。")]
+    public int maxPoints = 200;
+
+    [Tooltip("縦軸ラベルの分割数（目盛りの個数-1）")]
+    public int verticalTicks = 5;
+
+    [Tooltip("横軸に表示するラベルの最大数（多すぎる場合は間引き表示されます）")]
+    public int horizontalMaxLabels = 10;
+
+    [Tooltip("ラベルのグラフに対するオフセット（例えば左ラベルや下ラベルの位置調整）")]
+    public Vector2 labelOffset = new Vector2(-36f, -18f);
+
+    [Header("ラベル設定（自動生成）")]
+    [Tooltip("ラベルのフォントサイズ")]
+    public float labelFontSize = 14f;
+    [Tooltip("ラベルの色")]
+    public Color labelColor = Color.white;
+    [Tooltip("ラベルのサイズ（幅×高さ）")]
+    public Vector2 labelSize = new Vector2(60f, 20f);
 
     private RectTransform graphContainer;
     private List<float> scoreHistory = new List<float>();
@@ -39,6 +61,13 @@ public class ScoreUI : MonoBehaviour
     private void HandleCreatureDied(float finalFitness)
     {
         scoreHistory.Add(finalFitness);
+
+        // 最大保持数を超えたら古い要素から削除して長さを制限する
+        while (scoreHistory.Count > maxPoints)
+        {
+            scoreHistory.RemoveAt(0);
+        }
+
         RefreshGraph(scoreHistory);
     }
 
@@ -67,6 +96,27 @@ public class ScoreUI : MonoBehaviour
 
         // 4. 横軸の間隔を計算（スコアの数で枠の横幅を等分する）
         float xInterval = graphWidth / (scoreHistory.Count - 1);
+
+        // --- 軸ラベルの生成（TextMeshProUGUI をプレハブなしで自動生成） ---
+        // 縦軸ラベル（0〜maxScore を verticalTicks ごとに表示）
+        for (int t = 0; t <= verticalTicks; t++)
+        {
+            float normalized = (float)t / verticalTicks; // 0..1
+            float yPos = normalized * graphHeight;
+
+            GameObject vLabel = CreateTMPLabel(Mathf.RoundToInt(normalized * maxScore).ToString(), new Vector2(labelOffset.x, yPos), TextAlignmentOptions.Right);
+            graphObjects.Add(vLabel);
+        }
+
+        // 横軸ラベル（インデックスを間引き表示）
+        int step = Mathf.Max(1, Mathf.CeilToInt((float)scoreHistory.Count / horizontalMaxLabels));
+        for (int i = 0; i < scoreHistory.Count; i += step)
+        {
+            float xPos = i * xInterval;
+
+            GameObject hLabel = CreateTMPLabel(i.ToString(), new Vector2(xPos, labelOffset.y), TextAlignmentOptions.Center);
+            graphObjects.Add(hLabel);
+        }
 
         // 前のフレームのドットの位置を覚えておく変数（線で繋ぐため）
         Vector2 lastDotPosition = Vector2.zero;
@@ -132,5 +182,26 @@ public class ScoreUI : MonoBehaviour
         // AからBの方向へ向くように、画像を回転させる（Z軸回転）
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         lineRt.localRotation = Quaternion.Euler(0, 0, angle);
+    }
+
+    // TextMeshProUGUI ラベルをランタイムで生成するヘルパー
+    GameObject CreateTMPLabel(string text, Vector2 anchoredPosition, TextAlignmentOptions alignment)
+    {
+        GameObject go = new GameObject("TMPLabel", typeof(RectTransform));
+        go.transform.SetParent(graphContainer, false);
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = labelFontSize;
+        tmp.color = labelColor;
+        tmp.alignment = alignment;
+
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.zero;
+        rt.sizeDelta = labelSize;
+        rt.anchoredPosition = anchoredPosition;
+
+        return go;
     }
 }

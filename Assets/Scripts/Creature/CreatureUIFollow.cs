@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+namespace Neuro.Creature{   
 public class CreatureUIFollow : MonoBehaviour
 {
     [SerializeField] private Slider hpSlider;
@@ -123,4 +123,5 @@ public class CreatureUIFollow : MonoBehaviour
             hpSlider.value = currentHP;
         }
     }
+}
 }
