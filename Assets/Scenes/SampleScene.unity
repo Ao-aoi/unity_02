@@ -262,11 +262,13 @@ MonoBehaviour:
   lineColor: {r: 0.18238991, g: 0.18238991, b: 0.18238991, a: 1}
   lineWidth: 1
   dotSize: 2
-  maxPoints: 200
-  labelPrefab: {fileID: 0}
+  maxPoints: 50
   verticalTicks: 5
   horizontalMaxLabels: 10
   labelOffset: {x: -36, y: -18}
+  labelFontSize: 14
+  labelColor: {r: 0, g: 0, b: 0, a: 1}
+  labelSize: {x: 60, y: 20}
 --- !u!114 &26423263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -411,7 +413,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   creaturePrefab: {fileID: 9148087301850144497, guid: 8919702e6f3ab0e4f81bdf508c52754e, type: 3}
   sliderCanvas: {fileID: 1653310464}
-  maxCreaturesCount: 20
+  maxCreaturesCount: 10
   spawnPoints:
   - {fileID: 1295842592}
   - {fileID: 8218826}
@@ -1412,7 +1414,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   foodPrefab: {fileID: 1486863054288805033, guid: c907d886bd617ff4a9b153c6e154dcf7, type: 3}
-  spawnRatePerSecond: 0.3
+  spawnRatePerSecond: 1
 --- !u!4 &1908826950
 Transform:
   m_ObjectHideFlags: 0

@@ -104,16 +104,25 @@ public class EcosystemManager : MonoBehaviour
 
         Destroy(deadCreature);
 
-        // 2. 次の親を選んで、リアルタイム補充！
         CreatureGenome nextGenome = null;
 
-        // エリートプールに遺伝子が1つでもストックされていれば
         if (eliteGenomes.Count > 0)
         {
-            // 歴代トップ（一番スコアが高かったやつ）の遺伝子をクローン（コピー）する
-            nextGenome = eliteGenomes[0].genome.Clone();
+            // 💡 改善策：常に1位だけを選ぶのではなく、プール（上位5人）の中からランダムに選ぶ！
+            // これにより、優秀な遺伝子が1回の失敗で絶滅するのを防ぎ、複数の子孫を残せるようになります。
+            int randomIndex = UnityEngine.Random.Range(0, eliteGenomes.Count);
             
-            // ★ 進化のスパイス：コピーした遺伝子を少しだけ「突然変異」させる！
+            // さらに、超・エリート（歴代1位）が選ばれやすくなるように少しひいきする（ルーレット選択の簡易版）
+            // 50%の確率で強制的に1位、残りの50%で2位〜5位からランダム
+            if (UnityEngine.Random.value < 0.5f)
+            {
+                randomIndex = 0; // 歴代トップ
+            }
+
+            nextGenome = eliteGenomes[randomIndex].genome.Clone();
+            
+            // 🧬 突然変異の微調整
+            // 天才の形が崩れすぎないよう、変異量（mutationAmount）を少しマイルド（0.1fなど）にするのもおすすめです
             nextGenome.Mutate(mutationRate, mutationAmount);
         }
 
