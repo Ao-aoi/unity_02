@@ -148,9 +148,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 1
-  m_AngularDamping: 1
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -697,9 +697,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 1
-  m_AngularDamping: 1
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -861,9 +861,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 1
-  m_AngularDamping: 1
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1084,9 +1084,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 1
-  m_AngularDamping: 1
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1273,9 +1273,9 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 1
-  m_AngularDamping: 1
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 2
   m_GravityScale: 0
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1485,6 +1485,8 @@ MonoBehaviour:
   sightLineRenderer: {fileID: 7010102514150227361}
   lineSegments: 20
   lockOnLineRenderer: {fileID: 8133486123703673292}
+  dirToClosestFood: {x: 0, y: 0}
+  distanceToClosestFood: 1
 --- !u!114 &1226849010607430204
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1499,4 +1501,3 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   totalFitness: 0
   gridSize: 2
-  sensor: {fileID: 7659998071618968459}

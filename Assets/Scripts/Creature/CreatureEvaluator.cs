@@ -3,68 +3,80 @@ using System.Collections.Generic;
 
 public class CreatureEvaluator : MonoBehaviour
 {
-    [Header("評価スコア（これが高いほど次世代に遺伝しやすい）")]
+    [Header("評価スコア")]
     public float totalFitness = 0f;
 
     [Header("グリッド探索の設定")]
     public float gridSize = 2.0f;
+    private HashSet<Vector2Int> exploredGrid = new HashSet<Vector2Int>();
 
-    [Header("参照")]
-    [SerializeField] private CreatureSensor sensor; // 参照する目のコンポーネント
     private float previousDistanceToFood = Mathf.Infinity;
     private GameObject currentTrackedFood = null;
 
-    // 踏破したマス目を記録するハッシュセット
-    private HashSet<Vector2Int> exploredGrid = new HashSet<Vector2Int>();
+    void Start()
+    {
+        // 最初のマス目を開拓済みにする（これによって、生まれた瞬間の無条件+15を防ぐ）
+        RecordGridPosition();
+    }
 
     void Update()
     {
-        // 1. センサーのデータを使って、エサへの接近報酬を計算
+        // 1. 生きているだけでエラい！ボーナス（1秒間に +1 のスコア）
+        totalFitness += Time.deltaTime;
+
+        // 2. 距離による報酬（視界に入っていなくても、一番近いエサへの純粋な距離で測る）
         EvaluateDistanceReward();
 
-        // 2. 自分の位置を使って、空間の探索報酬を計算
+        // 3. 空間の探索報酬
         EvaluateExplorationReward();
     }
 
-    // 🔴 報酬①＆②：近づくとプラス、遠ざかるとマイナス
     void EvaluateDistanceReward()
     {
-        if (sensor == null) return;
+        // 視界（センサー）関係なく、世界中のエサから一番近いものを探す（匂いのような感覚）
+        GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
+        GameObject closestFood = null;
+        float closestDistance = Mathf.Infinity;
 
-        // センサーが今まさにロックオンしているエサと、その距離を取得
-        GameObject targetFood = sensor.ClosestFood;
-        // 実際の距離（メートル単位）をセンサーのデータから逆算（正規化を戻す）
-        float currentDistance = sensor.DistanceToClosestFood * sensor.sightRange;
-
-        if (targetFood != null)
+        foreach (GameObject food in foods)
         {
-            if (currentTrackedFood == targetFood && previousDistanceToFood != Mathf.Infinity)
+            float dist = Vector3.Distance(food.transform.position, transform.position);
+            if (dist < closestDistance)
             {
-                float deltaDistance = previousDistanceToFood - currentDistance;
+                closestDistance = dist;
+                closestFood = food;
+            }
+        }
+
+        if (closestFood != null)
+        {
+            // ターゲットが変わっていなければ距離の差分を計算
+            if (currentTrackedFood == closestFood && previousDistanceToFood != Mathf.Infinity)
+            {
+                float deltaDistance = previousDistanceToFood - closestDistance;
 
                 if (deltaDistance > 0)
                 {
-                    totalFitness += deltaDistance * 10f; // 近づいた！
+                    // 近づいた！（+報酬を大きめに）
+                    totalFitness += deltaDistance * 20f; 
                 }
                 else if (deltaDistance < 0)
                 {
-                    totalFitness += deltaDistance * 5f;  // 遠ざかった（ペナルティ）
+                    // 遠ざかった！（ペナルティは控えめにして、動くのを怖がらせないようにする）
+                    totalFitness += deltaDistance * 2f; 
                 }
             }
-
-            currentTrackedFood = targetFood;
-            previousDistanceToFood = currentDistance;
-        }
-        else
-        {
-            // エサを見失ったら履歴をリセット
-            previousDistanceToFood = Mathf.Infinity;
-            currentTrackedFood = null;
+            currentTrackedFood = closestFood;
+            previousDistanceToFood = closestDistance;
         }
     }
 
-    // 🟢 報酬③：広い範囲を歩き回ったら報酬
     void EvaluateExplorationReward()
+    {
+        RecordGridPosition();
+    }
+
+    void RecordGridPosition()
     {
         int gridX = Mathf.RoundToInt(transform.position.x / gridSize);
         int gridY = Mathf.RoundToInt(transform.position.y / gridSize);
@@ -73,8 +85,7 @@ public class CreatureEvaluator : MonoBehaviour
         if (!exploredGrid.Contains(currentGridPos))
         {
             exploredGrid.Add(currentGridPos);
-            totalFitness += 15f; // 新エリア開拓ボーナス！
-            // Debug.Log($"新エリア開拓！ 総スコア: {totalFitness}");
+            totalFitness += 15f; // 動いて新エリアに行った時だけもらえる
         }
     }
 }

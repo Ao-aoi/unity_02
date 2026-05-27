@@ -6,27 +6,29 @@ public class CreatureAgent : MonoBehaviour
     [Header("ステータス")]
     public float maxHP = 100f;
     private float currentHP;
-    public float hungerSpeed = 8f; // 毎秒減るHP
-    // 動いた量に応じた消費設定（角度あたりの消費量）
+    public float hungerSpeed = 8f; 
+    
     [Tooltip("1 度あたりに消費するHP量")] public float energyPerDegree = 0.02f;
     [Tooltip("ノイズ対策として無視する最小角度変化（度）")] public float movementThresholdDegrees = 0.1f;
+    
     [Header("参照")]
-    [SerializeField] private CreatureUIFollow uiFollow; // 同一オブジェクトにあるUI追従クラスの参照
+    [SerializeField] private CreatureUIFollow uiFollow; 
 
     private HingeJoint2D[] joints;
     private float[] prevJointAngles;
     private EcosystemManager manager;
+    private CreatureBrain brain;
+    private CreatureSensor sensor;
 
-    // マネージャーから誕生時に呼ばれてセットされる関数
-    public void SetupAgent(EcosystemManager ecosystemManager)
-    {
-        manager = ecosystemManager;
-    }
+    // 運動で消費したエネルギーを一時的に溜めておく変数
+    private float pendingEnergyConsumption = 0f;
 
-    void Start()
+    // ★ 改善点1: コンポーネントの取得と配列の初期化は Awake にまとめる
+    void Awake()
     {
-        currentHP = maxHP;
+        sensor = GetComponent<CreatureSensor>();
         joints = GetComponentsInChildren<HingeJoint2D>();
+        
         if (joints != null && joints.Length > 0)
         {
             prevJointAngles = new float[joints.Length];
@@ -37,52 +39,95 @@ public class CreatureAgent : MonoBehaviour
         }
     }
 
+    public void SetupAgent(EcosystemManager ecosystemManager)
+    {
+        manager = ecosystemManager;
+    }
+
+    void Start()
+    {
+        currentHP = maxHP;
+
+        // マネージャーからInitializeBrainが呼ばれなかった場合（テスト時など）の安全策
+        if (brain == null)
+        {
+            InitializeBrain(null);
+        }
+    }
+
+    public void InitializeBrain(CreatureGenome inheritedGenome = null)
+    {
+        int inputCount = 3;
+        int outputCount = joints != null ? joints.Length : 0;
+        
+        brain = new CreatureBrain(inputCount, outputCount);
+
+        if (inheritedGenome != null)
+        {
+            brain.LoadGenome(inheritedGenome);
+        }
+    }
+
     void FixedUpdate()
     {
-        // ランダム運動（フェーズ1の処理）
         float totalMovementDegrees = 0f;
-        if (joints != null)
+
+        if (brain != null && sensor != null && joints != null)
         {
+            // 1. インプット（目）
+            float[] inputs = new float[3];
+            inputs[0] = sensor.dirToClosestFood.x;      
+            inputs[1] = sensor.dirToClosestFood.y;      
+            inputs[2] = sensor.distanceToClosestFood; 
+
+            // 2. 計算（脳）
+            float[] outputs = brain.Evaluate(inputs);
+
+            // 3. アウトプット（筋肉）
             for (int i = 0; i < joints.Length; i++)
             {
                 HingeJoint2D joint = joints[i];
-                if (joint != null && joint.useMotor)
+                if (joint != null && joint.useMotor && i < outputs.Length)
                 {
                     JointMotor2D motor = joint.motor;
-                    motor.motorSpeed = Random.Range(-300f, 300f);
+                    motor.motorSpeed = outputs[i] * 300f;
                     motor.maxMotorTorque = 100f;
                     joint.motor = motor;
-                }
 
-                if (joint != null)
-                {
+                    // 運動量の計算
                     float currentAngle = joint.jointAngle;
-                    float prevAngle = (prevJointAngles != null && i < prevJointAngles.Length) ? prevJointAngles[i] : currentAngle;
+                    float prevAngle = prevJointAngles[i];
                     float delta = Mathf.Abs(Mathf.DeltaAngle(prevAngle, currentAngle));
-                    if (delta > movementThresholdDegrees) totalMovementDegrees += delta;
-                    if (prevJointAngles != null && i < prevJointAngles.Length) prevJointAngles[i] = currentAngle;
+                    
+                    if (delta > movementThresholdDegrees)
+                    {
+                        totalMovementDegrees += delta;
+                    }
+
+                    prevJointAngles[i] = currentAngle;
                 }
             }
         }
 
+        // ★ 改善点2: FixedUpdate ではHPを直接減らさず、消費予定として溜めるだけにする
         if (totalMovementDegrees > 0f)
         {
-            currentHP -= totalMovementDegrees * energyPerDegree;
+            pendingEnergyConsumption += totalMovementDegrees * energyPerDegree;
         }
     }
 
     void Update()
     {
-        // 1. お腹を空かせる計算
+        // ★ 改善点2: Updateのタイミングで、時間経過の空腹と、運動で消費したカロリーをまとめて引き算する
         currentHP -= Time.deltaTime * hungerSpeed;
+        currentHP -= pendingEnergyConsumption;
+        pendingEnergyConsumption = 0f; // 引いたらリセット
 
-        // 2. 【API】UIFollowを直接呼んで「HPバーの値を書き換えて！」と通知する
         if (uiFollow != null)
         {
             uiFollow.UpdateHPBar(currentHP);
         }
 
-        // 3. 餓死したらマネージャーに通知して後片付けしてもらう
         if (currentHP <= 0)
         {
             if (manager != null)
@@ -96,13 +141,14 @@ public class CreatureAgent : MonoBehaviour
         }
     }
 
-    // 【API】
+    public CreatureGenome GetGenome()
+    {
+        return brain?.GetGenome();
+    }
+
     public void HealHP(float amount)
     {
-        // 現在のHPに回復量を足し、最大値（maxHP）を超えないように制限する
         currentHP = Mathf.Min(currentHP + amount, maxHP);
-
-        // 見た目担当のUIFollowに「HPが変わったよ！」と即座に通知する
         if (uiFollow != null)
         {
             uiFollow.UpdateHPBar(currentHP);
@@ -115,7 +161,6 @@ public class CreatureAgent : MonoBehaviour
         {
             return uiFollow.InitializeSlider(maxHP, sliderCanvas);
         }
-
         return null;
     }
 }
