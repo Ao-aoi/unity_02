@@ -1413,6 +1413,7 @@ GameObject:
   - component: {fileID: 8299207328326008858}
   - component: {fileID: 2312552536903357864}
   - component: {fileID: 7659998071618968459}
+  - component: {fileID: 1226849010607430204}
   m_Layer: 0
   m_Name: Creature_01
   m_TagString: Untagged
@@ -1484,5 +1485,18 @@ MonoBehaviour:
   sightLineRenderer: {fileID: 7010102514150227361}
   lineSegments: 20
   lockOnLineRenderer: {fileID: 8133486123703673292}
-  dirToClosestFood: {x: 0, y: 0}
-  distanceToClosestFood: 1
+--- !u!114 &1226849010607430204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9148087301850144497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2ac24e1f1791154783a048254ab1461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  totalFitness: 0
+  gridSize: 2
+  sensor: {fileID: 7659998071618968459}

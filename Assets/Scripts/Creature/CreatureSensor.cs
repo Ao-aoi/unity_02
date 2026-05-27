@@ -16,6 +16,9 @@ public class CreatureSensor : MonoBehaviour
     // AIに渡すためのセンサー出力データ
     [HideInInspector] public Vector2 dirToClosestFood = Vector2.zero; 
     [HideInInspector] public float distanceToClosestFood = 1f;       
+    public GameObject ClosestFood { get; private set; }
+    public float DistanceToClosestFood { get; private set; } = 1f;
+    public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
 
     void Update()
     {
@@ -66,7 +69,9 @@ public class CreatureSensor : MonoBehaviour
             dirToClosestFood.x = Vector3.Dot(directionWorld, transform.right);
             dirToClosestFood.y = Vector3.Dot(directionWorld, transform.up);
             distanceToClosestFood = Mathf.Clamp01(closestDistance / sightRange);
-
+            ClosestFood = closestFood;
+            DistanceToClosestFood = distanceToClosestFood;
+            DirToClosestFood = dirToClosestFood;
             // 🎯 【ロックオン線の描画】
             if (lockOnLineRenderer != null)
             {
@@ -80,8 +85,9 @@ public class CreatureSensor : MonoBehaviour
         // 🔴 エサがない、または視界から【外れた】場合
         else
         {
-            dirToClosestFood = Vector2.up;
-            distanceToClosestFood = 1f;
+            ClosestFood = null;
+            DistanceToClosestFood = 1f;
+            DirToClosestFood = Vector2.up;  
 
             // ❌ 【ロックオン線を消す】
             if (lockOnLineRenderer != null)
