@@ -19,6 +19,42 @@ public class CreatureSensor : MonoBehaviour
     public GameObject ClosestFood { get; private set; }
     public float DistanceToClosestFood { get; private set; } = 1f;
     public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
+    private Rigidbody2D[] childRigidbodies;
+
+    void Awake()
+    {
+        childRigidbodies = GetComponentsInChildren<Rigidbody2D>();
+    }
+
+    private Vector3 GetBodyCenterWorldPosition()
+    {
+        if (childRigidbodies != null && childRigidbodies.Length > 0)
+        {
+            Vector2 weightedCenter = Vector2.zero;
+            float totalMass = 0f;
+
+            for (int i = 0; i < childRigidbodies.Length; i++)
+            {
+                Rigidbody2D rb = childRigidbodies[i];
+                if (rb == null)
+                {
+                    continue;
+                }
+
+                float mass = Mathf.Max(rb.mass, 0.0001f);
+                weightedCenter += rb.worldCenterOfMass * mass;
+                totalMass += mass;
+            }
+
+            if (totalMass > 0f)
+            {
+                Vector2 center = weightedCenter / totalMass;
+                return new Vector3(center.x, center.y, transform.position.z);
+            }
+        }
+
+        return transform.position;
+    }
 
     void Update()
     {
@@ -36,7 +72,7 @@ public class CreatureSensor : MonoBehaviour
         
         GameObject closestFood = null;
         float closestDistance = Mathf.Infinity;
-        Vector3 currentPos = transform.position;
+        Vector3 currentPos = GetBodyCenterWorldPosition();
 
         // 全てのエサの中から一番近くて、かつ「視界に入っているエサ」を探す
         foreach (GameObject food in foods)
