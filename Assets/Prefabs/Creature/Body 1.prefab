@@ -447,7 +447,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_Sprite: {fileID: -8936386, guid: 7c94de89b73afb148ad54f621a55c9f5, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9254902, g: 0.7764706, b: 0.4509804, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -506,10 +506,10 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 0.4
-  m_LinearDamping: 0.3
-  m_AngularDamping: 3
-  m_GravityScale: 0
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 0
+  m_GravityScale: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -655,7 +655,7 @@ GameObject:
   - component: {fileID: 7659998071618968459}
   - component: {fileID: 1226849010607430204}
   m_Layer: 0
-  m_Name: Body
+  m_Name: Body 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -693,7 +693,7 @@ MonoBehaviour:
   hungerSpeed: 8
   energyPerDegree: 0.02
   movementThresholdDegrees: 0.1
-  armPrefab: {fileID: 7668893783045156190, guid: 81824260b5408134cbf06975102d2ad9, type: 3}
+  armPrefab: {fileID: 7668893783045156190, guid: a1a5d71c6f44af340a9ba30b77884766, type: 3}
   spawnRadius: 0.1
   uiFollow: {fileID: 2312552536903357864}
 --- !u!114 &2312552536903357864
