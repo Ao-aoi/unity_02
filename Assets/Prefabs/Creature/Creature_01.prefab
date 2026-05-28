@@ -1480,6 +1480,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78025223752c04546b9f49b4bb16663f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sensorUpdateInterval: 0.2
   sightRange: 3
   fieldOfViewAngle: 30
   sightLineRenderer: {fileID: 7010102514150227361}

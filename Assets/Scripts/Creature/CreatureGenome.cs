@@ -4,11 +4,16 @@ using UnityEngine;
 [System.Serializable]
 public class CreatureGenome
 {
+    [Tooltip("身体の構造遺伝子")]
+    public int armCount;    // 手足の数（★新要素：今回は初期値を2〜4本などでランダムにします）
+
+    [Tooltip("脳の配線遺伝子")]
     public float[] weights; // 脳の全配線の強さ（重み）のデータ
 
     // 新しく完全ランダムな遺伝子を作る（第1世代用）
     public CreatureGenome(int totalWeightsCount)
     {
+        armCount = Random.Range(2, 4); // 2〜4本の手足をランダムに生やす（★新要素）    
         weights = new float[totalWeightsCount];
         for (int i = 0; i < weights.Length; i++)
         {
@@ -20,6 +25,7 @@ public class CreatureGenome
     public CreatureGenome Clone()
     {
         CreatureGenome clone = new CreatureGenome(this.weights.Length);
+        clone.armCount = this.armCount;
         System.Array.Copy(this.weights, clone.weights, this.weights.Length);
         return clone;
     }
@@ -36,6 +42,14 @@ public class CreatureGenome
                 weights[i] += Random.Range(-mutationAmount, mutationAmount);
                 weights[i] = Mathf.Clamp(weights[i], -1f, 1f); // 数値を行き過ぎないように制限
             }
+        }
+
+        if (Random.value < mutationRate)
+        {
+            int delta = Random.Range(-1, 2); // -1, 0, +1 のどれかで手足の数が変化する
+            armCount = Mathf.Clamp(armCount + delta, 0, 8); // 手足は最小0本、最大8本に制限
+            
+            Debug.Log($"🧬 身体に突然変異が発生！手足の数が {armCount} 本になりました。");
         }
     }
 }
