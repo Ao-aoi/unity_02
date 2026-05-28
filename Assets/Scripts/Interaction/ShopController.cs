@@ -181,5 +181,19 @@ namespace Neuro.Interaction
                 }
             }
         }
+
+        void LateUpdate()
+        {
+            // もし注目中のクリーチャーが破棄されていたら（Unity の null チェックで判定）、
+            // カメラのズーム解除と同じフェーズでショップを閉じる
+            if (currentCreature == null && shopUI != null)
+            {
+                // shopPanel が表示中なら閉じる
+                if (shopUI.shopPanel != null && shopUI.shopPanel.activeSelf)
+                {
+                    shopUI.CloseShop();
+                }
+            }
+        }
     }
 }
