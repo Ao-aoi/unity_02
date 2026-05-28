@@ -1,0 +1,17 @@
+{
+    "name": "Neuro.Interaction",
+    "rootNamespace": "",
+    "references": [
+        "GUID:a549ca28cded20c488f5d6f75ba0a07e",
+        "GUID:add9637894ce10d4b85d7b07569a53b8"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

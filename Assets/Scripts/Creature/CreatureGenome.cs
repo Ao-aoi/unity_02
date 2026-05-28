@@ -4,6 +4,8 @@ using UnityEngine;
 [System.Serializable]
 public class CreatureGenome
 {
+    [Tooltip("何世代目か")]
+    public int generation = 1;
     [Tooltip("身体の構造遺伝子")]
     public int armCount;    // 手足の数（★新要素：今回は初期値を2〜4本などでランダムにします）
 
@@ -26,6 +28,7 @@ public class CreatureGenome
     {
         CreatureGenome clone = new CreatureGenome(this.weights.Length);
         clone.armCount = this.armCount;
+        clone.generation = this.generation + 1;
         System.Array.Copy(this.weights, clone.weights, this.weights.Length);
         return clone;
     }

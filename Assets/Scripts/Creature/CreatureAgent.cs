@@ -234,5 +234,38 @@ public class CreatureAgent : MonoBehaviour
         }
         return null;
     }
+
+    public void AddArm()
+    {
+        CreatureGenome currentGenome = GetGenome();
+        if (currentGenome == null || currentGenome.armCount >= 8) return;
+
+        currentGenome.armCount++;
+        RebuildBody(currentGenome);
+    }
+
+    public void RemoveArm()
+    {
+        CreatureGenome currentGenome = GetGenome();
+        if (currentGenome == null || currentGenome.armCount <= 0) return;
+
+        currentGenome.armCount--;
+        RebuildBody(currentGenome);
+    }
+
+    private void RebuildBody(CreatureGenome newGenome)
+    {
+        // 1. 今生えている手足をすべて破壊（Destroy）する
+        if (joints != null)
+        {
+            foreach (HingeJoint2D joint in joints)
+            {
+                if (joint != null) Destroy(joint.gameObject);
+            }
+        }
+        
+        // 2. 変更された遺伝子（手足の数）を使って、再び生やし直す！
+        InitializeBrain(newGenome);
+    }
 }
 }
