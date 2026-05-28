@@ -694,7 +694,7 @@ MonoBehaviour:
   energyPerDegree: 0.02
   movementThresholdDegrees: 0.1
   armPrefab: {fileID: 7668893783045156190, guid: a1a5d71c6f44af340a9ba30b77884766, type: 3}
-  spawnRadius: 0.1
+  spawnRadius: 1
   uiFollow: {fileID: 2312552536903357864}
 --- !u!114 &2312552536903357864
 MonoBehaviour:
