@@ -12,6 +12,7 @@ public class EcosystemManager : MonoBehaviour
     {
         public Transform pointTransform; // スポーンする場所
         public EvaluationCriteria pointCriteria; // この場所から生まれる個体に適用するルール
+        [Tooltip("このスポーンポイントで常に維持する個体数。0以下ならマネージャーの初期生成数を使う")] public int creatureCount = -1;
         
         [Header("見た目の設定")]
         public Color bodyArmColor = Color.white; // 胴体と腕の色
@@ -54,22 +55,43 @@ public class EcosystemManager : MonoBehaviour
         {
             eliteGenomesPerSpawn = new List<GenomeRecord>[spawnPoints.Length];
             for (int i = 0; i < spawnPoints.Length; i++) eliteGenomesPerSpawn[i] = new List<GenomeRecord>();
-        }
-        for (int i = 0; i < maxCreaturesCount; i++)
-        {
-            SpawnNewCreature(null);
+
+            for (int spawnIndex = 0; spawnIndex < spawnPoints.Length; spawnIndex++)
+            {
+                int spawnCount = GetSpawnPointCreatureCount(spawnIndex);
+                for (int i = 0; i < spawnCount; i++)
+                {
+                    SpawnNewCreature(null, spawnIndex);
+                }
+            }
         }
     }
 
     public void SpawnNewCreature(CreatureGenome parentGenome)
     {
-        // ランダムなスポーンポイントを選ぶ
+        if (spawnPoints == null || spawnPoints.Length == 0)
+            return;
+
         int spawnIndex = UnityEngine.Random.Range(0, spawnPoints.Length);
+        SpawnNewCreature(parentGenome, spawnIndex);
+    }
+
+    public void SpawnNewCreature(CreatureGenome parentGenome, int spawnIndex)
+    {
+        if (spawnPoints == null || spawnPoints.Length == 0)
+            return;
+
+        if (spawnIndex < 0 || spawnIndex >= spawnPoints.Length)
+        {
+            spawnIndex = UnityEngine.Random.Range(0, spawnPoints.Length);
+        }
+
         SpawnPointConfig chosenSpawn = spawnPoints[spawnIndex];
-        
+
+        Vector3 spawnOrigin = chosenSpawn != null && chosenSpawn.pointTransform != null ? chosenSpawn.pointTransform.position : Vector3.zero;
         Vector3 randomOffset = new Vector3(UnityEngine.Random.Range(-3f, 3f), UnityEngine.Random.Range(-3f, 3f), 0);
-        Vector3 spawnPos = (chosenSpawn.pointTransform != null ? chosenSpawn.pointTransform.position : Vector3.zero) + randomOffset;
-        
+        Vector3 spawnPos = spawnOrigin + randomOffset;
+
         GameObject newCreature = Instantiate(creaturePrefab, spawnPos, Quaternion.identity);
 
         CreatureAgent agent = newCreature.GetComponent<CreatureAgent>();
@@ -78,7 +100,10 @@ public class EcosystemManager : MonoBehaviour
             agent.SetupAgent(this);
             
             // 💡 【新要素】選ばれたスポーンポイントの色をクリーチャーに渡す！
-            agent.SetColors(chosenSpawn.bodyArmColor, chosenSpawn.faceColor);
+            if (chosenSpawn != null)
+            {
+                agent.SetColors(chosenSpawn.bodyArmColor, chosenSpawn.faceColor);
+            }
             // origin を記録
             agent.originSpawnIndex = spawnIndex;
             
@@ -102,7 +127,7 @@ public class EcosystemManager : MonoBehaviour
             agent.InitializeBrain(parentGenome);
 
             CreatureEvaluator evaluator = newCreature.GetComponent<CreatureEvaluator>();
-            if (evaluator != null && chosenSpawn.pointCriteria != null)
+            if (evaluator != null && chosenSpawn != null && chosenSpawn.pointCriteria != null)
             {
                 evaluator.currentCriteria = chosenSpawn.pointCriteria;
             }
@@ -118,6 +143,7 @@ public class EcosystemManager : MonoBehaviour
     {
         CreatureAgent agent = deadCreature.GetComponent<CreatureAgent>();
         CreatureEvaluator evaluator = deadCreature.GetComponent<CreatureEvaluator>();
+        int origin = -1;
         
         if (agent != null && evaluator != null)
         {
@@ -130,7 +156,7 @@ public class EcosystemManager : MonoBehaviour
 
             if (deadGenome != null)
             {
-                int origin = agent.originSpawnIndex;
+                origin = agent.originSpawnIndex;
                 if (eliteGenomesPerSpawn != null && origin >= 0 && origin < eliteGenomesPerSpawn.Length)
                 {
                     var pool = eliteGenomesPerSpawn[origin];
@@ -163,7 +189,26 @@ public class EcosystemManager : MonoBehaviour
         Destroy(deadCreature);
 
         // 次の個体はスポーン時にそのスポーンポイントのプールから親を選ぶ
-        SpawnNewCreature(null);
+        if (origin >= 0 && spawnPoints != null && origin < spawnPoints.Length)
+        {
+            SpawnNewCreature(null, origin);
+        }
+        else
+        {
+            SpawnNewCreature(null);
+        }
+    }
+
+    private int GetSpawnPointCreatureCount(int spawnIndex)
+    {
+        if (spawnPoints == null || spawnIndex < 0 || spawnIndex >= spawnPoints.Length)
+            return 0;
+
+        SpawnPointConfig spawnPoint = spawnPoints[spawnIndex];
+        if (spawnPoint == null || spawnPoint.creatureCount < 0)
+            return Mathf.Max(0, maxCreaturesCount);
+
+        return spawnPoint.creatureCount;
     }
 }
 }
