@@ -74,6 +74,8 @@ public class CreatureAgent : MonoBehaviour
     // 現在の血統の色を記憶しておく変数
     [HideInInspector] public Color currentBodyArmColor = Color.white;
     [HideInInspector] public Color currentFaceColor = Color.white;
+    // どのスポーンポイントから生まれたか（EcosystemManager がセットする）
+    [HideInInspector] public int originSpawnIndex = -1;
 
     void Awake()
     {

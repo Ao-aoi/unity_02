@@ -16,6 +16,11 @@ public class EcosystemManager : MonoBehaviour
         [Header("見た目の設定")]
         public Color bodyArmColor = Color.white; // 胴体と腕の色
         public Color faceColor = Color.white;    // 顔の色
+        
+        [Header("遺伝設定（-1でマネージャーのデフォルトを使用）")]
+        [Tooltip("スポーンポイント固有の重み変異確率。-1でマネージャーの値を使用")] public float mutationRate = -1f;
+        [Tooltip("スポーンポイント固有の重み変化量。-1でマネージャーの値を使用")] public float mutationAmount = -1f;
+        [Tooltip("スポーンポイント固有のエリートプールサイズ。-1でマネージャーの値を使用")] public int genomePoolSize = -1;
     }
     public static event Action<float> CreatureDied;
 
@@ -39,10 +44,17 @@ public class EcosystemManager : MonoBehaviour
         public CreatureGenome genome;
     }
     
-    private List<GenomeRecord> eliteGenomes = new List<GenomeRecord>();
+    // 各スポーンポイントごとのエリート遺伝子プール
+    private List<GenomeRecord>[] eliteGenomesPerSpawn;
 
     void Start()
     {
+        // スポーンポイントごとのエリートプールを初期化
+        if (spawnPoints != null && spawnPoints.Length > 0)
+        {
+            eliteGenomesPerSpawn = new List<GenomeRecord>[spawnPoints.Length];
+            for (int i = 0; i < spawnPoints.Length; i++) eliteGenomesPerSpawn[i] = new List<GenomeRecord>();
+        }
         for (int i = 0; i < maxCreaturesCount; i++)
         {
             SpawnNewCreature(null);
@@ -67,7 +79,26 @@ public class EcosystemManager : MonoBehaviour
             
             // 💡 【新要素】選ばれたスポーンポイントの色をクリーチャーに渡す！
             agent.SetColors(chosenSpawn.bodyArmColor, chosenSpawn.faceColor);
+            // origin を記録
+            agent.originSpawnIndex = spawnIndex;
             
+            // 親ゲノムが指定されていなければ、そのスポーンポイントのエリートプールから選ぶ
+            if (parentGenome == null && eliteGenomesPerSpawn != null && spawnIndex >= 0 && spawnIndex < eliteGenomesPerSpawn.Length)
+            {
+                var pool = eliteGenomesPerSpawn[spawnIndex];
+                if (pool != null && pool.Count > 0)
+                {
+                    int randomIndex = UnityEngine.Random.Range(0, pool.Count);
+                    if (UnityEngine.Random.value < 0.5f) randomIndex = 0;
+                    CreatureGenome parent = pool[randomIndex].genome.Clone();
+
+                    float useMutRate = (chosenSpawn != null && chosenSpawn.mutationRate >= 0f) ? chosenSpawn.mutationRate : mutationRate;
+                    float useMutAmount = (chosenSpawn != null && chosenSpawn.mutationAmount >= 0f) ? chosenSpawn.mutationAmount : mutationAmount;
+
+                    parentGenome = CreatureAgent.ApplyDetailedMutation(parent, useMutRate, useMutAmount, CreatureAgent.DefaultMutationConfig);
+                }
+            }
+
             agent.InitializeBrain(parentGenome);
 
             CreatureEvaluator evaluator = newCreature.GetComponent<CreatureEvaluator>();
@@ -99,8 +130,18 @@ public class EcosystemManager : MonoBehaviour
 
             if (deadGenome != null)
             {
-                eliteGenomes.Add(new GenomeRecord { fitness = finalFitness, genome = deadGenome });
-                eliteGenomes = eliteGenomes.OrderByDescending(g => g.fitness).Take(genomePoolSize).ToList();
+                int origin = agent.originSpawnIndex;
+                if (eliteGenomesPerSpawn != null && origin >= 0 && origin < eliteGenomesPerSpawn.Length)
+                {
+                    var pool = eliteGenomesPerSpawn[origin];
+                    pool.Add(new GenomeRecord { fitness = finalFitness, genome = deadGenome });
+
+                    int poolSize = genomePoolSize;
+                    if (spawnPoints != null && origin >= 0 && origin < spawnPoints.Length && spawnPoints[origin] != null && spawnPoints[origin].genomePoolSize >= 0)
+                        poolSize = spawnPoints[origin].genomePoolSize;
+
+                    eliteGenomesPerSpawn[origin] = pool.OrderByDescending(g => g.fitness).Take(poolSize).ToList();
+                }
             }
         }
 
@@ -121,23 +162,8 @@ public class EcosystemManager : MonoBehaviour
 
         Destroy(deadCreature);
 
-        CreatureGenome nextGenome = null;
-
-        if (eliteGenomes.Count > 0)
-        {
-            int randomIndex = UnityEngine.Random.Range(0, eliteGenomes.Count);
-
-            if (UnityEngine.Random.value < 0.5f)
-            {
-                randomIndex = 0;
-            }
-
-            CreatureGenome parent = eliteGenomes[randomIndex].genome.Clone();
-            // 重み変異は manager の mutationRate / mutationAmount を使い、構造変異は CreatureAgent 側のデフォルト設定を利用する
-            nextGenome = CreatureAgent.ApplyDetailedMutation(parent, mutationRate, mutationAmount, CreatureAgent.DefaultMutationConfig);
-        }
-
-        SpawnNewCreature(nextGenome);
+        // 次の個体はスポーン時にそのスポーンポイントのプールから親を選ぶ
+        SpawnNewCreature(null);
     }
 }
 }
