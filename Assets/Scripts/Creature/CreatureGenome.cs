@@ -1,4 +1,5 @@
 using UnityEngine;
+using Neuro.Creature;
 
 // 🧬 遺伝子（ゲノム）クラス：脳の設計図をただの数値配列として持つ
 [System.Serializable]
@@ -52,16 +53,13 @@ public class CreatureGenome
         if (Random.value < mutationRate)
         {
             int delta = Random.Range(-1, 2); // -1, 0, +1 のどれかで手足の数が変化する
-            armCount = Mathf.Clamp(armCount + delta, 0, 15); // 手足は最小0本、最大15本に制限
-            
-            // Debug.Log($"🧬 身体に突然変異が発生！手足の数が {armCount} 本になりました。");
+            armCount = Mathf.Clamp(armCount + delta, CreatureLimits.MinArms, CreatureLimits.MaxArms);
         }
 
         if (Random.value < mutationRate)
         {
             int delta = Random.Range(-1, 2); // -1, 0, +1 のどれかで関節の数が変化する
-            jointsPerArm = Mathf.Clamp(jointsPerArm + delta, 1, 5); // 関節は最小1つ、最大5つに制限
-            // Debug.Log($"🧬 突然変異により、足の関節数が {jointsPerArm} 個になりました！");
+            jointsPerArm = Mathf.Clamp(jointsPerArm + delta, CreatureLimits.MinJointsPerArm, CreatureLimits.MaxJointsPerArm);
         }
     }
 }
@@ -88,7 +86,37 @@ public class CreatureBrain
     // 外部から遺伝子（設計図）を上書きセットする
     public void LoadGenome(CreatureGenome newGenome)
     {
-        this.genome = newGenome.Clone();
+        if (newGenome == null)
+        {
+            int totalWeights = inputCount * outputCount;
+            this.genome = new CreatureGenome(totalWeights);
+            return;
+        }
+
+        int expectedWeights = inputCount * outputCount;
+        if (newGenome.weights != null && newGenome.weights.Length == expectedWeights)
+        {
+            this.genome = newGenome.Clone();
+            return;
+        }
+
+        // 重み配列の長さが期待値と異なる場合、安全に再生成して既存の重みを可能な限りコピーする
+        CreatureGenome adjusted = new CreatureGenome(expectedWeights);
+        adjusted.armCount = newGenome.armCount;
+        adjusted.jointsPerArm = newGenome.jointsPerArm;
+        adjusted.generation = newGenome.generation;
+
+        if (newGenome.weights != null)
+        {
+            int copyLen = Mathf.Min(newGenome.weights.Length, adjusted.weights.Length);
+            System.Array.Copy(newGenome.weights, adjusted.weights, copyLen);
+            for (int i = copyLen; i < adjusted.weights.Length; i++)
+            {
+                adjusted.weights[i] = Random.Range(-1f, 1f);
+            }
+        }
+
+        this.genome = adjusted;
     }
 
     // 現在の遺伝子（設計図）を取得する

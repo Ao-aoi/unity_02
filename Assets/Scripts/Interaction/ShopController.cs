@@ -81,7 +81,7 @@ namespace Neuro.Interaction
             if (currentCreature != null && playerPoints >= armCost)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.armCount < 8)
+                if (genome != null && genome.armCount < CreatureLimits.MaxArms)
                 {
                     playerPoints -= armCost; // ポイント消費
                     currentCreature.AddArm(); // クリーチャーの改造を実行！
@@ -97,7 +97,7 @@ namespace Neuro.Interaction
             if (currentCreature != null)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.armCount > 0)
+                if (genome != null && genome.armCount > CreatureLimits.MinArms)
                 {
                     // 今回は減らすのは無料っす
                     currentCreature.RemoveArm();
@@ -113,7 +113,7 @@ namespace Neuro.Interaction
             if (currentCreature != null && playerPoints >= jointCost)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.jointsPerArm < 4)
+                if (genome != null && genome.jointsPerArm < CreatureLimits.MaxJointsPerArm)
                 {
                     playerPoints -= jointCost; // ポイント消費
                     currentCreature.AddJointSegment(); // クリーチャーの改造を実行！
@@ -129,7 +129,7 @@ namespace Neuro.Interaction
             if (currentCreature != null)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.jointsPerArm > 1)
+                if (genome != null && genome.jointsPerArm > CreatureLimits.MinJointsPerArm)
                 {
                     // 今回は減らすのは無料っす
                     currentCreature.RemoveJointSegment();

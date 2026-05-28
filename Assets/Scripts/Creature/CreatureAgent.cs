@@ -261,7 +261,7 @@ public class CreatureAgent : MonoBehaviour
     public void AddJointSegment()
     {
         CreatureGenome currentGenome = GetGenome();
-        if (currentGenome == null || currentGenome.jointsPerArm >= 4) return;
+        if (currentGenome == null || currentGenome.jointsPerArm >= CreatureLimits.MaxJointsPerArm) return;
 
         currentGenome.jointsPerArm++;
         RebuildBody(currentGenome);
@@ -270,7 +270,7 @@ public class CreatureAgent : MonoBehaviour
     public void RemoveJointSegment()
     {
         CreatureGenome currentGenome = GetGenome();
-        if (currentGenome == null || currentGenome.jointsPerArm <= 1) return;
+        if (currentGenome == null || currentGenome.jointsPerArm <= CreatureLimits.MinJointsPerArm) return;
 
         currentGenome.jointsPerArm--;
         RebuildBody(currentGenome);
@@ -279,7 +279,7 @@ public class CreatureAgent : MonoBehaviour
     public void AddArm()
     {
         CreatureGenome currentGenome = GetGenome();
-        if (currentGenome == null || currentGenome.armCount >= 8) return;
+        if (currentGenome == null || currentGenome.armCount >= CreatureLimits.MaxArms) return;
         currentGenome.armCount++;
         RebuildBody(currentGenome);
     }
@@ -287,7 +287,7 @@ public class CreatureAgent : MonoBehaviour
     public void RemoveArm()
     {
         CreatureGenome currentGenome = GetGenome();
-        if (currentGenome == null || currentGenome.armCount <= 0) return;
+        if (currentGenome == null || currentGenome.armCount <= CreatureLimits.MinArms) return;
         currentGenome.armCount--;
         RebuildBody(currentGenome);
     }
