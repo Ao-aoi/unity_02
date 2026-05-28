@@ -27,10 +27,17 @@ public class CreatureSensor : MonoBehaviour
     public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
     private Rigidbody2D[] childRigidbodies;
     private float sensorUpdateTimer;
+    private float effectiveSensorUpdateInterval;
 
     void Awake()
     {
         childRigidbodies = GetComponentsInChildren<Rigidbody2D>();
+        RefreshUpdateInterval();
+    }
+
+    void OnValidate()
+    {
+        RefreshUpdateInterval();
     }
 
     void Start()
@@ -71,12 +78,11 @@ public class CreatureSensor : MonoBehaviour
     void Update()
     {
         sensorUpdateTimer += Time.deltaTime;
-        float updateInterval = Mathf.Max(MinSensorUpdateInterval, sensorUpdateInterval);
-        if (sensorUpdateTimer >= updateInterval)
+        if (sensorUpdateTimer >= effectiveSensorUpdateInterval)
         {
             // 1. 最も近いエサを探して、視界内ならロックオン線を描く
             FindAndTrackClosestFood();
-            sensorUpdateTimer -= updateInterval;
+            sensorUpdateTimer %= effectiveSensorUpdateInterval;
         }
 
         // 2. 視界の扇型を描画する
@@ -84,6 +90,11 @@ public class CreatureSensor : MonoBehaviour
     }
 
     // 2Dエサセンサー ＋ 視界判定・ロックオン線描画
+    private void RefreshUpdateInterval()
+    {
+        effectiveSensorUpdateInterval = Mathf.Max(MinSensorUpdateInterval, sensorUpdateInterval);
+    }
+
     void FindAndTrackClosestFood()
     {
         GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
