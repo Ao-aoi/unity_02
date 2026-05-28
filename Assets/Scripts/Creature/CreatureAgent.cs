@@ -36,6 +36,40 @@ public class CreatureAgent : MonoBehaviour
     private CreatureSensor sensor;
 
     private float pendingEnergyConsumption = 0f;
+    [Header("突然変異設定")]
+    [Tooltip("重み（ウェイト）変異の確率（0..1） - 高めで良い（例: 0.1）")]
+    public float weightMutationRate = 0.1f;
+    [Tooltip("重み変化量の最大値（ランダムに±する）")]
+    public float weightMutationAmount = 0.2f;
+
+    [System.Serializable]
+    public class MutationConfig
+    {
+        [Header("構造変異の基本確率（個体ごと）")]
+        public float structuralMutationProb = 0.03f; // 個体単位で構造変異が発生する確率
+
+        [Header("腕の変化確率（ベース）")]
+        public float armAddBase = 0.005f;
+        public float armRemoveBase = 0.002f;
+
+        [Header("関節の変化確率（ベース）")]
+        public float jointAddBase = 0.01f;
+        public float jointRemoveBase = 0.005f;
+
+        [Header("中間ノード（隠れノード）の変化確率（ベース）")]
+        public float nodeAddBase = 0.02f;
+        public float nodeRemoveBase = 0.01f;
+
+        [Header("ポアソン分布のλ（1回の個体変異で変える期待個数）")]
+        public float poissonLambda = 0.2f;
+
+        [Header("隠れノードの範囲（下限はコード上でも保証）")]
+        public int minHiddenNodes = 2;
+        public int maxHiddenNodes = 24;
+    }
+
+    // デフォルト設定（外部から参照可）
+    public static readonly MutationConfig DefaultMutationConfig = new MutationConfig();
     
     // 現在の血統の色を記憶しておく変数
     [HideInInspector] public Color currentBodyArmColor = Color.white;
@@ -315,6 +349,88 @@ public class CreatureAgent : MonoBehaviour
 
         brain = new CreatureBrain(inputCount, outputCount, currentGenome.hiddenNodeCount);
         brain.LoadGenome(currentGenome);
+    }
+
+    // --- 詳細な突然変異ロジック（重み + 構造変異） ---
+    public static CreatureGenome ApplyDetailedMutation(CreatureGenome parentGenome, float weightMutRate, float weightMutAmount, MutationConfig config = null)
+    {
+        if (parentGenome == null) return null;
+        if (config == null) config = DefaultMutationConfig;
+
+        CreatureGenome child = parentGenome.Clone();
+
+        // 1) 重みの変異
+        if (child.weights != null && child.weights.Length > 0)
+        {
+            for (int i = 0; i < child.weights.Length; i++)
+            {
+                if (Random.value < weightMutRate)
+                {
+                    child.weights[i] += Random.Range(-weightMutAmount, weightMutAmount);
+                    child.weights[i] = Mathf.Clamp(child.weights[i], -1f, 1f);
+                }
+            }
+        }
+
+        // 2) 構造変異（個体単位でまず発生判定）
+        if (Random.value < config.structuralMutationProb)
+        {
+            // 腕の増減
+            int armChanges = SamplePoisson(config.poissonLambda);
+            for (int k = 0; k < Mathf.Max(1, armChanges); k++)
+            {
+                float addP = config.armAddBase * (1f - (child.armCount / (float)CreatureLimits.MaxArms));
+                if (Random.value < addP)
+                    child.armCount = Mathf.Clamp(child.armCount + 1, CreatureLimits.MinArms, CreatureLimits.MaxArms);
+
+                float remP = config.armRemoveBase * (child.armCount / (float)CreatureLimits.MaxArms);
+                if (Random.value < remP)
+                    child.armCount = Mathf.Clamp(child.armCount - 1, CreatureLimits.MinArms, CreatureLimits.MaxArms);
+            }
+
+            // 関節の増減（各腕の関節数）
+            int jointChanges = SamplePoisson(config.poissonLambda);
+            for (int k = 0; k < Mathf.Max(1, jointChanges); k++)
+            {
+                float addP = config.jointAddBase * (1f - (child.jointsPerArm / (float)CreatureLimits.MaxJointsPerArm));
+                if (Random.value < addP)
+                    child.jointsPerArm = Mathf.Clamp(child.jointsPerArm + 1, CreatureLimits.MinJointsPerArm, CreatureLimits.MaxJointsPerArm);
+
+                float remP = config.jointRemoveBase * (child.jointsPerArm / (float)CreatureLimits.MaxJointsPerArm);
+                if (Random.value < remP)
+                    child.jointsPerArm = Mathf.Clamp(child.jointsPerArm - 1, CreatureLimits.MinJointsPerArm, CreatureLimits.MaxJointsPerArm);
+            }
+
+            // 中間ノード（隠れノード）の増減
+            int nodeChanges = SamplePoisson(config.poissonLambda);
+            for (int k = 0; k < Mathf.Max(1, nodeChanges); k++)
+            {
+                float addP = config.nodeAddBase * (1f - (child.hiddenNodeCount / (float)config.maxHiddenNodes));
+                if (Random.value < addP)
+                    child.hiddenNodeCount = Mathf.Clamp(child.hiddenNodeCount + 1, config.minHiddenNodes, config.maxHiddenNodes);
+
+                float remP = config.nodeRemoveBase * (child.hiddenNodeCount / (float)config.maxHiddenNodes);
+                if (Random.value < remP)
+                    child.hiddenNodeCount = Mathf.Clamp(child.hiddenNodeCount - 1, config.minHiddenNodes, config.maxHiddenNodes);
+            }
+        }
+
+        return child;
+    }
+
+    // λを受け取りポアソン乱数を返す（小さいλ向け）
+    private static int SamplePoisson(float lambda)
+    {
+        if (lambda <= 0f) return 0;
+        float L = Mathf.Exp(-lambda);
+        int k = 0;
+        float p = 1f;
+        do
+        {
+            k++;
+            p *= Random.value;
+        } while (p > L && k < 100);
+        return k - 1;
     }
 }
 }

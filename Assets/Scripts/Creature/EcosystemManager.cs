@@ -126,14 +126,15 @@ public class EcosystemManager : MonoBehaviour
         if (eliteGenomes.Count > 0)
         {
             int randomIndex = UnityEngine.Random.Range(0, eliteGenomes.Count);
-            
+
             if (UnityEngine.Random.value < 0.5f)
             {
-                randomIndex = 0; 
+                randomIndex = 0;
             }
 
-            nextGenome = eliteGenomes[randomIndex].genome.Clone();
-            nextGenome.Mutate(mutationRate, mutationAmount);
+            CreatureGenome parent = eliteGenomes[randomIndex].genome.Clone();
+            // 重み変異は manager の mutationRate / mutationAmount を使い、構造変異は CreatureAgent 側のデフォルト設定を利用する
+            nextGenome = CreatureAgent.ApplyDetailedMutation(parent, mutationRate, mutationAmount, CreatureAgent.DefaultMutationConfig);
         }
 
         SpawnNewCreature(nextGenome);
