@@ -11,8 +11,9 @@ namespace Neuro.Interaction
         public ShopUIManager shopUI; 
 
         [Header("ポイント設定")]
-        public int playerPoints = 100; // 現在のお財布
-        public int armCost = 20;       // 手足を増やすコスト
+        [SerializeField] private int playerPoints = 100; // 現在のお財布
+        [SerializeField] private int armCost = 20;       // 手足を増やすコスト
+        [SerializeField] private int jointCost = 30;     // 関節を増やすコスト  
 
         private CreatureAgent currentCreature;
 
@@ -26,6 +27,8 @@ namespace Neuro.Interaction
             {
                 shopUI.OnAddArmRequested += HandleAddArm;
                 shopUI.OnRemoveArmRequested += HandleRemoveArm;
+                shopUI.OnAddJointRequested += HandleAddJoint;
+                shopUI.OnRemoveJointRequested += HandleRemoveJoint;
             }
         }
 
@@ -37,6 +40,8 @@ namespace Neuro.Interaction
             {
                 shopUI.OnAddArmRequested -= HandleAddArm;
                 shopUI.OnRemoveArmRequested -= HandleRemoveArm;
+                shopUI.OnAddJointRequested -= HandleAddJoint;
+                shopUI.OnRemoveJointRequested -= HandleRemoveJoint;
             }
         }
 
@@ -65,7 +70,7 @@ namespace Neuro.Interaction
                 if (genome != null)
                 {
                     // UI側は表示するだけで、ロジックは一切知らない
-                    shopUI.OpenShop(genome.generation, genome.armCount, playerPoints);
+                    shopUI.OpenShop(genome.generation, genome.armCount, genome.jointsPerArm, playerPoints);
                 }
             }
         }
@@ -97,6 +102,38 @@ namespace Neuro.Interaction
                     // 今回は減らすのは無料っす
                     currentCreature.RemoveArm();
                     
+                    UpdateShopUI(); // 画面を更新
+                }
+            }
+        }
+
+        // 🛠️ 「関節を増やす」ボタンが押された時のロジック
+        private void HandleAddJoint()
+        {
+            if (currentCreature != null && playerPoints >= jointCost)
+            {
+                CreatureGenome genome = currentCreature.GetGenome();
+                if (genome != null && genome.jointsPerArm < 4)
+                {
+                    playerPoints -= jointCost; // ポイント消費
+                    currentCreature.AddJointSegment(); // クリーチャーの改造を実行！
+
+                    UpdateShopUI(); // 画面を更新
+                }
+            }
+        }
+
+        // 🛠️ 「関節を減らす」ボタンが押された時のロジック
+        private void HandleRemoveJoint()
+        {
+            if (currentCreature != null)
+            {
+                CreatureGenome genome = currentCreature.GetGenome();
+                if (genome != null && genome.jointsPerArm > 1)
+                {
+                    // 今回は減らすのは無料っす
+                    currentCreature.RemoveJointSegment();
+
                     UpdateShopUI(); // 画面を更新
                 }
             }
