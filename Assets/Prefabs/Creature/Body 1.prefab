@@ -16,7 +16,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2547104437234473386
 Transform:
   m_ObjectHideFlags: 0
@@ -155,7 +155,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &575794219656584131
 Transform:
   m_ObjectHideFlags: 0
@@ -693,6 +693,9 @@ MonoBehaviour:
   hungerSpeed: 8
   energyPerDegree: 0.02
   movementThresholdDegrees: 0.1
+  maxSatiety: 100
+  satietyDecayRate: 10
+  maxConsumptionReduction: 0.8
   armPrefab: {fileID: 7668893783045156190, guid: a1a5d71c6f44af340a9ba30b77884766, type: 3}
   spawnRadius: 0.13
   uiFollow: {fileID: 2312552536903357864}

@@ -1,109 +1,120 @@
 using UnityEngine;
 using Neuro.Creature;
 
-// 🧬 遺伝子（ゲノム）クラス：脳の設計図をただの数値配列として持つ
+// 🧬 遺伝子（ゲノム）クラス
 [System.Serializable]
 public class CreatureGenome
 {
     [Tooltip("何世代目か")]
     public int generation = 1;
-    [Tooltip("身体の構造遺伝子")] public int armCount;    // 手足の数（★新要素：今回は初期値を2〜4本などでランダムにします）
-    [Tooltip("1本の足の中にある関節（セグメント）の数")] public int jointsPerArm;
-    [Tooltip("脳の配線遺伝子")]
+    
+    [Header("身体の構造遺伝子")] 
+    public int armCount;    
+    public int jointsPerArm;
+
+    [Header("感覚の構造遺伝子")]
+    public float sightRange;       
+    public float fieldOfViewAngle; 
+
+    [Header("脳の配線遺伝子")]
     public float[] weights; // 脳の全配線の強さ（重み）のデータ
 
-    // 新しく完全ランダムな遺伝子を作る（第1世代用）
     public CreatureGenome(int totalWeightsCount)
     {
-        armCount = Random.Range(2, 4); // 2〜3本の手足をランダムに生やす（★新要素）    
-        jointsPerArm = Random.Range(1, 3); // 1〜2個の関節をランダムに生やす（★新要素）
+        armCount = Random.Range(2, 4);     
+        jointsPerArm = Random.Range(1, 3); 
+        sightRange = 5f;        
+        fieldOfViewAngle = 90f; 
 
         weights = new float[totalWeightsCount];
         for (int i = 0; i < weights.Length; i++)
-        {
-            weights[i] = Random.Range(-1f, 1f); // -1.0 〜 +1.0 の間でランダム初期化
-        }
+            weights[i] = Random.Range(-1f, 1f); 
     }
 
-    // 親の遺伝子を完全にコピーする
     public CreatureGenome Clone()
     {
         CreatureGenome clone = new CreatureGenome(this.weights.Length);
         clone.armCount = this.armCount;
         clone.jointsPerArm = this.jointsPerArm;
+        clone.sightRange = this.sightRange;
+        clone.fieldOfViewAngle = this.fieldOfViewAngle;
         clone.generation = this.generation + 1;
         System.Array.Copy(this.weights, clone.weights, this.weights.Length);
         return clone;
     }
 
-    // 🔥 突然変異（Mutation）をさせるAPI
-    // スマホゲームの「ショップのアップグレード」や「進化」でこの数値をいじります
     public void Mutate(float mutationRate, float mutationAmount)
     {
         for (int i = 0; i < weights.Length; i++)
         {
-            // mutationRate（例えば0.1なら10%の確率）で配線が狂う
             if (Random.value < mutationRate)
             {
                 weights[i] += Random.Range(-mutationAmount, mutationAmount);
-                weights[i] = Mathf.Clamp(weights[i], -1f, 1f); // 数値を行き過ぎないように制限
+                weights[i] = Mathf.Clamp(weights[i], -1f, 1f); 
             }
         }
 
         if (Random.value < mutationRate)
         {
-            int delta = Random.Range(-1, 2); // -1, 0, +1 のどれかで手足の数が変化する
+            int delta = Random.Range(-1, 2); 
             armCount = Mathf.Clamp(armCount + delta, CreatureLimits.MinArms, CreatureLimits.MaxArms);
         }
 
         if (Random.value < mutationRate)
         {
-            int delta = Random.Range(-1, 2); // -1, 0, +1 のどれかで関節の数が変化する
+            int delta = Random.Range(-1, 2); 
             jointsPerArm = Mathf.Clamp(jointsPerArm + delta, CreatureLimits.MinJointsPerArm, CreatureLimits.MaxJointsPerArm);
         }
+
+        if (Random.value < mutationRate)
+            sightRange = Mathf.Clamp(sightRange + Random.Range(-0.5f, 0.5f), 2f, 15f);
+
+        if (Random.value < mutationRate)
+            fieldOfViewAngle = Mathf.Clamp(fieldOfViewAngle + Random.Range(-10f, 10f), 30f, 180f);
     }
 }
 
-// 🧠 脳みそクラス：インプットからアウトプットを計算するだけの純粋な計算機
+// 🧠 【大進化】隠れ層（中間層）を搭載した多層ニューラルネットワーク脳
 public class CreatureBrain
 {
     private int inputCount;
     private int outputCount;
+    private int hiddenCount = 12; // 💡 中間層のノード数（複雑なジャンプ運動の学習に最適なサイズ）
     private CreatureGenome genome;
 
-    // 脳の初期化（入力の数、出力の数を設定）
     public CreatureBrain(int inputs, int outputs)
     {
         inputCount = inputs;
         outputCount = outputs;
 
-        // 簡単な「入力層 ➔ 出力層」の直結ネットワーク（一番軽量でスマホ向き）
-        // 必要になる配線の総数は 入力数 × 出力数
-        int totalWeights = inputCount * outputCount;
+        // 💡 【重要】多層ネットワークに必要な配線総数を計算
+        // (入力 ➔ 中間) + (中間 ➔ 出力) 
+        int totalWeights = (inputCount * hiddenCount) + (hiddenCount * outputCount);
         genome = new CreatureGenome(totalWeights);
     }
 
-    // 外部から遺伝子（設計図）を上書きセットする
     public void LoadGenome(CreatureGenome newGenome)
     {
+        int expectedWeights = (inputCount * hiddenCount) + (hiddenCount * outputCount);
+
         if (newGenome == null)
         {
-            int totalWeights = inputCount * outputCount;
-            this.genome = new CreatureGenome(totalWeights);
+            this.genome = new CreatureGenome(expectedWeights);
             return;
         }
 
-        int expectedWeights = inputCount * outputCount;
         if (newGenome.weights != null && newGenome.weights.Length == expectedWeights)
         {
             this.genome = newGenome.Clone();
             return;
         }
 
-        // 重み配列の長さが期待値と異なる場合、安全に再生成して既存の重みを可能な限りコピーする
+        // 🛠️ 手足や関節が増減しても、古い脳の配線を安全に引き継ぐオートマジックリサイズ
         CreatureGenome adjusted = new CreatureGenome(expectedWeights);
         adjusted.armCount = newGenome.armCount;
         adjusted.jointsPerArm = newGenome.jointsPerArm;
+        adjusted.sightRange = newGenome.sightRange;
+        adjusted.fieldOfViewAngle = newGenome.fieldOfViewAngle;
         adjusted.generation = newGenome.generation;
 
         if (newGenome.weights != null)
@@ -111,39 +122,42 @@ public class CreatureBrain
             int copyLen = Mathf.Min(newGenome.weights.Length, adjusted.weights.Length);
             System.Array.Copy(newGenome.weights, adjusted.weights, copyLen);
             for (int i = copyLen; i < adjusted.weights.Length; i++)
-            {
                 adjusted.weights[i] = Random.Range(-1f, 1f);
-            }
         }
 
         this.genome = adjusted;
     }
 
-    // 現在の遺伝子（設計図）を取得する
-    public CreatureGenome GetGenome()
-    {
-        return genome;
-    }
+    public CreatureGenome GetGenome() => genome;
 
-    // ⚙️ 【一番重要】目（入力）のデータから手足のモーター速度（出力）を計算する関数
+    // ⚙️ 【脳の思考ロジック】多層フォワードプロパゲーション
     public float[] Evaluate(float[] inputs)
     {
-        float[] outputs = new float[outputCount];
+        // --- 1層目: 入力層 ➔ 中間層 ---
+        float[] hiddenOutputs = new float[hiddenCount];
+        int wIndex = 0;
 
-        int weightIndex = 0;
-
-        // ニューラルネットワークのマトリクス計算
-        for (int o = 0; o < outputCount; o++)
+        for (int h = 0; h < hiddenCount; h++)
         {
             float sum = 0f;
             for (int i = 0; i < inputCount; i++)
             {
-                // 入力値 × 遺伝子の配線の強さ をすべて足し合わせる
-                sum += inputs[i] * genome.weights[weightIndex];
-                weightIndex++;
+                sum += inputs[i] * genome.weights[wIndex++];
             }
+            // 活性化関数: 軽量なReLU（0以下をカット）を挟むことで、脳に「複雑な条件分岐」の能力を与えるっす！
+            hiddenOutputs[h] = Mathf.Max(0f, sum); 
+        }
 
-            // 出力値を -1.0 〜 +1.0 の間に綺麗に変換する（活性化関数 Tanh の代わり）
+        // --- 2層目: 中間層 ➔ 出力層 ---
+        float[] outputs = new float[outputCount];
+        for (int o = 0; o < outputCount; o++)
+        {
+            float sum = 0f;
+            for (int h = 0; h < hiddenCount; h++)
+            {
+                sum += hiddenOutputs[h] * genome.weights[wIndex++];
+            }
+            // 最終出力はモーター速度（-1.0 〜 +1.0）
             outputs[o] = Mathf.Max(-1f, Mathf.Min(1f, sum));
         }
 
