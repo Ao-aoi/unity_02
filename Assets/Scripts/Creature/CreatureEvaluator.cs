@@ -16,6 +16,8 @@ namespace Neuro.Creature
         private float previousDistanceToFood = Mathf.Infinity;
         private GameObject currentTrackedFood = null;
         private Rigidbody2D bodyRb;
+        private Vector3 lastPosition;
+        private float stationaryTimer = 0f;
 
         void Start()
         {
@@ -25,6 +27,9 @@ namespace Neuro.Creature
             
             // ルールが渡されていなければ、デフォルトのルールを作成
             if (currentCriteria == null) currentCriteria = new EvaluationCriteria();
+
+            lastPosition = transform.position;
+            stationaryTimer = 0f;
         }
 
         void Update()
@@ -63,6 +68,25 @@ namespace Neuro.Creature
                 {
                     totalFitness += currentCriteria.airTimeReward * Time.deltaTime;
                 }
+            }
+
+            // 5. 滞在（その場に留まる）ペナルティ
+            if (currentCriteria != null && currentCriteria.stationaryPenaltyPerSec > 0f)
+            {
+                float movedDist = Vector3.Distance(transform.position, lastPosition);
+                if (movedDist > currentCriteria.stationaryMovementEpsilon)
+                {
+                    stationaryTimer = 0f;
+                }
+                else
+                {
+                    stationaryTimer += Time.deltaTime;
+                    if (stationaryTimer > currentCriteria.stationaryThresholdSeconds)
+                    {
+                        totalFitness -= currentCriteria.stationaryPenaltyPerSec * Time.deltaTime;
+                    }
+                }
+                lastPosition = transform.position;
             }
         }
 
