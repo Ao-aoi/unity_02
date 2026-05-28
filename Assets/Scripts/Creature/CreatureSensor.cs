@@ -74,7 +74,7 @@ public class CreatureSensor : MonoBehaviour
         {
             // 1. 最も近いエサを探して、視界内ならロックオン線を描く
             FindAndTrackClosestFood();
-            sensorUpdateTimer = 0f;
+            sensorUpdateTimer -= updateInterval;
         }
 
         // 2. 視界の扇型を描画する
