@@ -2,9 +2,11 @@ using UnityEngine;
 
 public class CreatureSensor : MonoBehaviour
 {
+    private const float MinSensorUpdateInterval = 0.01f;
+
     [Header("更新間隔")]
     [Tooltip("エサ探索を実行する間隔（秒）")]
-    [Min(0.01f)] public float sensorUpdateInterval = 0.2f;
+    [Min(MinSensorUpdateInterval)] public float sensorUpdateInterval = 0.2f;
 
     [Header("視界のパラメーター")]
     public float sightRange = 5f;        // 視界の届く距離
@@ -69,7 +71,7 @@ public class CreatureSensor : MonoBehaviour
     void Update()
     {
         sensorUpdateTimer += Time.deltaTime;
-        float updateInterval = Mathf.Max(0.01f, sensorUpdateInterval);
+        float updateInterval = Mathf.Max(MinSensorUpdateInterval, sensorUpdateInterval);
         if (sensorUpdateTimer >= updateInterval)
         {
             // 1. 最も近いエサを探して、視界内ならロックオン線を描く
