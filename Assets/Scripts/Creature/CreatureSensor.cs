@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class CreatureSensor : MonoBehaviour
 {
+    [Header("更新間隔")]
+    [Tooltip("エサ探索を実行する間隔（秒）")]
+    [Min(0.01f)] public float sensorUpdateInterval = 0.2f;
+
     [Header("視界のパラメーター")]
     public float sightRange = 5f;        // 視界の届く距離
     public float fieldOfViewAngle = 90f; // 視界の扇型の角度
@@ -20,10 +24,16 @@ public class CreatureSensor : MonoBehaviour
     public float DistanceToClosestFood { get; private set; } = 1f;
     public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
     private Rigidbody2D[] childRigidbodies;
+    private float sensorUpdateTimer;
 
     void Awake()
     {
         childRigidbodies = GetComponentsInChildren<Rigidbody2D>();
+    }
+
+    void Start()
+    {
+        FindAndTrackClosestFood();
     }
 
     private Vector3 GetBodyCenterWorldPosition()
@@ -58,8 +68,14 @@ public class CreatureSensor : MonoBehaviour
 
     void Update()
     {
-        // 1. 最も近いエサを探して、視界内ならロックオン線を描く
-        FindAndTrackClosestFood();
+        sensorUpdateTimer += Time.deltaTime;
+        float updateInterval = Mathf.Max(0.01f, sensorUpdateInterval);
+        if (sensorUpdateTimer >= updateInterval)
+        {
+            // 1. 最も近いエサを探して、視界内ならロックオン線を描く
+            FindAndTrackClosestFood();
+            sensorUpdateTimer = 0f;
+        }
 
         // 2. 視界の扇型を描画する
         DrawSightCone();
