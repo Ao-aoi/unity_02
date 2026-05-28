@@ -2,6 +2,12 @@ using UnityEngine;
 
 public class CreatureSensor : MonoBehaviour
 {
+    private const float MinSensorUpdateInterval = 0.01f;
+
+    [Header("更新間隔")]
+    [Tooltip("エサ探索を実行する間隔（秒）")]
+    [Min(MinSensorUpdateInterval)] public float sensorUpdateInterval = 0.2f;
+
     [Header("視界のパラメーター")]
     public float sightRange = 5f;        // 視界の届く距離
     public float fieldOfViewAngle = 90f; // 視界の扇型の角度
@@ -20,10 +26,23 @@ public class CreatureSensor : MonoBehaviour
     public float DistanceToClosestFood { get; private set; } = 1f;
     public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
     private Rigidbody2D[] childRigidbodies;
+    private float sensorUpdateTimer;
+    private float effectiveSensorUpdateInterval;
 
     void Awake()
     {
         childRigidbodies = GetComponentsInChildren<Rigidbody2D>();
+        RefreshUpdateInterval();
+    }
+
+    void OnValidate()
+    {
+        RefreshUpdateInterval();
+    }
+
+    void Start()
+    {
+        FindAndTrackClosestFood();
     }
 
     private Vector3 GetBodyCenterWorldPosition()
@@ -58,14 +77,24 @@ public class CreatureSensor : MonoBehaviour
 
     void Update()
     {
-        // 1. 最も近いエサを探して、視界内ならロックオン線を描く
-        FindAndTrackClosestFood();
+        sensorUpdateTimer += Time.deltaTime;
+        if (sensorUpdateTimer >= effectiveSensorUpdateInterval)
+        {
+            // 1. 最も近いエサを探して、視界内ならロックオン線を描く
+            FindAndTrackClosestFood();
+            sensorUpdateTimer %= effectiveSensorUpdateInterval;
+        }
 
         // 2. 視界の扇型を描画する
         DrawSightCone();
     }
 
     // 2Dエサセンサー ＋ 視界判定・ロックオン線描画
+    private void RefreshUpdateInterval()
+    {
+        effectiveSensorUpdateInterval = Mathf.Max(MinSensorUpdateInterval, sensorUpdateInterval);
+    }
+
     void FindAndTrackClosestFood()
     {
         GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
