@@ -12,6 +12,16 @@ public class CreatureAgent : MonoBehaviour
     [Tooltip("1 度あたりに消費するHP量")] public float energyPerDegree = 0.02f;
     [Tooltip("ノイズ対策として無視する最小角度変化（度）")] public float movementThresholdDegrees = 0.1f;
 
+    [Header("食事バフ")]
+    [Tooltip("食べ物で蓄積される満腹値の最大値（調整用）")]
+    public float maxSatiety = 100f;
+    [Tooltip("満腹値の減少速度（1秒あたり）")]
+    public float satietyDecayRate = 10f;
+    [Tooltip("満腹による最大消費削減割合（0〜1）。例: 0.8 -> 最大で消費が20%になる）")]
+    [Range(0f, 1f)] public float maxConsumptionReduction = 0.8f;
+
+    private float currentSatiety = 0f;
+
     [Header("動的パーツ生成の設定")]
     [Tooltip("生成する手足（パーツ）のプレハブを割り当ててください")]
     public GameObject armPrefab;
@@ -97,9 +107,19 @@ public class CreatureAgent : MonoBehaviour
 
     void Update()
     {
-        currentHP -= Time.deltaTime * hungerSpeed;
-        currentHP -= pendingEnergyConsumption;
+        // 食後の満腹効果で消費が軽減される（満腹値に応じて割合を下げる）
+        float satietyRatio = (maxSatiety > 0f) ? Mathf.Clamp01(currentSatiety / maxSatiety) : 0f;
+        float consumptionMultiplier = 1f - satietyRatio * maxConsumptionReduction;
+
+        currentHP -= Time.deltaTime * hungerSpeed * consumptionMultiplier;
+        currentHP -= pendingEnergyConsumption * consumptionMultiplier;
         pendingEnergyConsumption = 0f; 
+
+        // 満腹値を時間経過で減少させる
+        if (currentSatiety > 0f)
+        {
+            currentSatiety = Mathf.Max(0f, currentSatiety - satietyDecayRate * Time.deltaTime);
+        }
 
         if (uiFollow != null)
         {
@@ -220,6 +240,13 @@ public class CreatureAgent : MonoBehaviour
         {
             uiFollow.UpdateHPBar(currentHP);
         }
+    }
+
+    // 食べ物を摂取した際のAPI: HP回復に加えて満腹値を蓄積する
+    public void ApplyFood(float amount)
+    {
+        HealHP(amount);
+        currentSatiety = Mathf.Min(maxSatiety, currentSatiety + amount);
     }
 
     public Slider InitializeUIFollow(Canvas sliderCanvas)

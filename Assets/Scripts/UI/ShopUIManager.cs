@@ -41,8 +41,6 @@ namespace Neuro.UI
             if (addJointButton != null) addJointButton.onClick.AddListener(() => OnAddJointRequested?.Invoke());
             if (removeJointButton != null) removeJointButton.onClick.AddListener(() => OnRemoveJointRequested?.Invoke());
         }
-
-        // 🎨 引数に「jointsPerArm（関節の数）」を追加
         public void OpenShop(int generation, int armCount, int jointsPerArm, int currentPoints)
         {
             shopPanel.SetActive(true);

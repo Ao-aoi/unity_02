@@ -16,8 +16,9 @@ public class FoodItem : MonoBehaviour
 
         if (agent != null)
         {
-            // 1. クリーチャーの回復APIを直接呼び出す（通知）
-            agent.HealHP(healAmount);
+            // 1. クリーチャーの回復APIを呼び出し、満腹バフも付与する
+            //    新しい ApplyFood API は HP 回復と満腹値の蓄積を同時に行います
+            agent.ApplyFood(healAmount);
 
             // 2. 食べた演出（パーティクル）をその場に生成
             if (eatEffectPrefab != null)
