@@ -2,10 +2,21 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using System.Linq; // ★リストをスコア順に並び替えるために必要
+using System.Linq;
+
 namespace Neuro.Creature{
 public class EcosystemManager : MonoBehaviour
 {
+    [Serializable]
+    public class SpawnPointConfig
+    {
+        public Transform pointTransform; // スポーンする場所
+        public EvaluationCriteria pointCriteria; // この場所から生まれる個体に適用するルール
+        
+        [Header("見た目の設定")]
+        public Color bodyArmColor = Color.white; // 胴体と腕の色
+        public Color faceColor = Color.white;    // 顔の色
+    }
     public static event Action<float> CreatureDied;
 
     [Header("プレハブ設定")]
@@ -13,7 +24,7 @@ public class EcosystemManager : MonoBehaviour
     [Header("UI設定")]
     public Canvas sliderCanvas;
     public int maxCreaturesCount = 5;
-    public Transform[] spawnPoints;
+    public SpawnPointConfig[] spawnPoints;
 
     [Header("遺伝（進化）設定")]
     [Tooltip("突然変異の確率 (0.0 ~ 1.0)")] public float mutationRate = 0.1f;
@@ -28,12 +39,10 @@ public class EcosystemManager : MonoBehaviour
         public CreatureGenome genome;
     }
     
-    // 🏆 歴代の優秀な遺伝子をストックしておく「エリートプール」
     private List<GenomeRecord> eliteGenomes = new List<GenomeRecord>();
 
     void Start()
     {
-        // 最初の世代は親がいないので、完全ランダム（nullを渡す）で定員分スポーン
         for (int i = 0; i < maxCreaturesCount; i++)
         {
             SpawnNewCreature(null);
@@ -42,24 +51,33 @@ public class EcosystemManager : MonoBehaviour
 
     public void SpawnNewCreature(CreatureGenome parentGenome)
     {
+        // ランダムなスポーンポイントを選ぶ
+        int spawnIndex = UnityEngine.Random.Range(0, spawnPoints.Length);
+        SpawnPointConfig chosenSpawn = spawnPoints[spawnIndex];
+        
         Vector3 randomOffset = new Vector3(UnityEngine.Random.Range(-3f, 3f), UnityEngine.Random.Range(-3f, 3f), 0);
-        Vector3 spawnPos = (spawnPoints.Length > 0 ? spawnPoints[UnityEngine.Random.Range(0, spawnPoints.Length)].position : Vector3.zero) + randomOffset;
+        Vector3 spawnPos = (chosenSpawn.pointTransform != null ? chosenSpawn.pointTransform.position : Vector3.zero) + randomOffset;
+        
         GameObject newCreature = Instantiate(creaturePrefab, spawnPos, Quaternion.identity);
 
         CreatureAgent agent = newCreature.GetComponent<CreatureAgent>();
         if (agent != null)
         {
             agent.SetupAgent(this);
-
-            // ここで、受け取った親の遺伝子を赤ちゃんの脳にセットする！
+            
+            // 💡 【新要素】選ばれたスポーンポイントの色をクリーチャーに渡す！
+            agent.SetColors(chosenSpawn.bodyArmColor, chosenSpawn.faceColor);
+            
             agent.InitializeBrain(parentGenome);
 
-            Slider sliderComponent = agent.InitializeUIFollow(sliderCanvas);
-
-            if (sliderComponent != null)
+            CreatureEvaluator evaluator = newCreature.GetComponent<CreatureEvaluator>();
+            if (evaluator != null && chosenSpawn.pointCriteria != null)
             {
-                creatureUiMap.Add(newCreature, sliderComponent);
+                evaluator.currentCriteria = chosenSpawn.pointCriteria;
             }
+
+            Slider sliderComponent = agent.InitializeUIFollow(sliderCanvas);
+            if (sliderComponent != null) creatureUiMap.Add(newCreature, sliderComponent);
         }
 
         aliveCreatures.Add(newCreature);
@@ -86,7 +104,6 @@ public class EcosystemManager : MonoBehaviour
             }
         }
 
-        // 1. リストとUIから削除
         if (aliveCreatures.Contains(deadCreature))
         {
             aliveCreatures.Remove(deadCreature);
@@ -108,25 +125,17 @@ public class EcosystemManager : MonoBehaviour
 
         if (eliteGenomes.Count > 0)
         {
-            // 💡 改善策：常に1位だけを選ぶのではなく、プール（上位5人）の中からランダムに選ぶ！
-            // これにより、優秀な遺伝子が1回の失敗で絶滅するのを防ぎ、複数の子孫を残せるようになります。
             int randomIndex = UnityEngine.Random.Range(0, eliteGenomes.Count);
             
-            // さらに、超・エリート（歴代1位）が選ばれやすくなるように少しひいきする（ルーレット選択の簡易版）
-            // 50%の確率で強制的に1位、残りの50%で2位〜5位からランダム
             if (UnityEngine.Random.value < 0.5f)
             {
-                randomIndex = 0; // 歴代トップ
+                randomIndex = 0; 
             }
 
             nextGenome = eliteGenomes[randomIndex].genome.Clone();
-            
-            // 🧬 突然変異の微調整
-            // 天才の形が崩れすぎないよう、変異量（mutationAmount）を少しマイルド（0.1fなど）にするのもおすすめです
             nextGenome.Mutate(mutationRate, mutationAmount);
         }
 
-        // 新しい遺伝子を持って生まれ変わる
         SpawnNewCreature(nextGenome);
     }
 }

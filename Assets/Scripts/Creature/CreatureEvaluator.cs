@@ -1,91 +1,105 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class CreatureEvaluator : MonoBehaviour
+namespace Neuro.Creature
 {
-    [Header("評価スコア")]
-    public float totalFitness = 0f;
-
-    [Header("グリッド探索の設定")]
-    public float gridSize = 2.0f;
-    private HashSet<Vector2Int> exploredGrid = new HashSet<Vector2Int>();
-
-    private float previousDistanceToFood = Mathf.Infinity;
-    private GameObject currentTrackedFood = null;
-
-    void Start()
+    public class CreatureEvaluator : MonoBehaviour
     {
-        // 最初のマス目を開拓済みにする（これによって、生まれた瞬間の無条件+15を防ぐ）
-        RecordGridPosition();
-    }
+        [Header("評価スコア")]
+        public float totalFitness = 0f;
 
-    void Update()
-    {
-        // 1. 生きているだけでエラい！ボーナス（1秒間に +1 のスコア）
-        totalFitness += Time.deltaTime;
+        // 💡 マネージャーから渡される「この個体の評価ルール」
+        public EvaluationCriteria currentCriteria;
 
-        // 2. 距離による報酬（視界に入っていなくても、一番近いエサへの純粋な距離で測る）
-        EvaluateDistanceReward();
+        [Header("状態トラッキング")]
+        private Vector3 spawnPosition;
+        private float previousDistanceToFood = Mathf.Infinity;
+        private GameObject currentTrackedFood = null;
+        private Rigidbody2D bodyRb;
 
-        // 3. 空間の探索報酬
-        EvaluateExplorationReward();
-    }
-
-    void EvaluateDistanceReward()
-    {
-        // 視界（センサー）関係なく、世界中のエサから一番近いものを探す（匂いのような感覚）
-        GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
-        GameObject closestFood = null;
-        float closestDistance = Mathf.Infinity;
-
-        foreach (GameObject food in foods)
+        void Start()
         {
-            float dist = Vector3.Distance(food.transform.position, transform.position);
-            if (dist < closestDistance)
+            spawnPosition = transform.position;
+            bodyRb = GetComponent<Rigidbody2D>();
+            if (bodyRb == null) bodyRb = GetComponentInChildren<Rigidbody2D>();
+            
+            // ルールが渡されていなければ、デフォルトのルールを作成
+            if (currentCriteria == null) currentCriteria = new EvaluationCriteria();
+        }
+
+        void Update()
+        {
+            if (currentCriteria == null) return;
+
+            // 1. 生存ボーナス
+            totalFitness += currentCriteria.survivalRewardPerSec * Time.deltaTime;
+
+            // 2. エサ探索の評価
+            if (currentCriteria.approachFoodReward > 0 || currentCriteria.escapeFoodPenalty > 0)
             {
-                closestDistance = dist;
-                closestFood = food;
+                EvaluateFoodDistance();
+            }
+
+            // 3. スピード（横移動）の評価
+            if (currentCriteria.horizontalMoveReward > 0)
+            {
+                // 生まれた場所からのX軸の距離をスコアにする（遠くに行くほど高い）
+                float distanceX = Mathf.Abs(transform.position.x - spawnPosition.x);
+                totalFitness += distanceX * currentCriteria.horizontalMoveReward * Time.deltaTime;
+            }
+
+            // 4. ジャンプ（高さと滞空）の評価
+            if (currentCriteria.heightReward > 0)
+            {
+                // 生まれた場所より上にいる場合、その高さをスコアにする
+                float heightY = Mathf.Max(0, transform.position.y - spawnPosition.y);
+                totalFitness += heightY * currentCriteria.heightReward * Time.deltaTime;
+            }
+            
+            if (currentCriteria.airTimeReward > 0 && bodyRb != null)
+            {
+                // Y軸の速度がプラス（上昇中）か、下に落ちている最中なら滞空とみなす
+                if (Mathf.Abs(bodyRb.linearVelocity.y) > 0.1f) 
+                {
+                    totalFitness += currentCriteria.airTimeReward * Time.deltaTime;
+                }
             }
         }
 
-        if (closestFood != null)
+        void EvaluateFoodDistance()
         {
-            // ターゲットが変わっていなければ距離の差分を計算
-            if (currentTrackedFood == closestFood && previousDistanceToFood != Mathf.Infinity)
-            {
-                float deltaDistance = previousDistanceToFood - closestDistance;
+            GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
+            GameObject closestFood = null;
+            float closestDistance = Mathf.Infinity;
 
-                if (deltaDistance > 0)
+            foreach (GameObject food in foods)
+            {
+                float dist = Vector3.Distance(food.transform.position, transform.position);
+                if (dist < closestDistance)
                 {
-                    // 近づいた！（+報酬を大きめに）
-                    totalFitness += deltaDistance * 20f; 
-                }
-                else if (deltaDistance < 0)
-                {
-                    // 遠ざかった！（ペナルティは控えめにして、動くのを怖がらせないようにする）
-                    totalFitness += deltaDistance * 2f; 
+                    closestDistance = dist;
+                    closestFood = food;
                 }
             }
-            currentTrackedFood = closestFood;
-            previousDistanceToFood = closestDistance;
-        }
-    }
 
-    void EvaluateExplorationReward()
-    {
-        RecordGridPosition();
-    }
+            if (closestFood != null)
+            {
+                if (currentTrackedFood == closestFood && previousDistanceToFood != Mathf.Infinity)
+                {
+                    float deltaDistance = previousDistanceToFood - closestDistance;
 
-    void RecordGridPosition()
-    {
-        int gridX = Mathf.RoundToInt(transform.position.x / gridSize);
-        int gridY = Mathf.RoundToInt(transform.position.y / gridSize);
-        Vector2Int currentGridPos = new Vector2Int(gridX, gridY);
-
-        if (!exploredGrid.Contains(currentGridPos))
-        {
-            exploredGrid.Add(currentGridPos);
-            totalFitness += 15f; // 動いて新エリアに行った時だけもらえる
+                    if (deltaDistance > 0)
+                    {
+                        totalFitness += deltaDistance * currentCriteria.approachFoodReward; 
+                    }
+                    else if (deltaDistance < 0)
+                    {
+                        totalFitness += deltaDistance * currentCriteria.escapeFoodPenalty; 
+                    }
+                }
+                currentTrackedFood = closestFood;
+                previousDistanceToFood = closestDistance;
+            }
         }
     }
 }

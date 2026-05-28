@@ -16,7 +16,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2547104437234473386
 Transform:
   m_ObjectHideFlags: 0
@@ -155,7 +155,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &575794219656584131
 Transform:
   m_ObjectHideFlags: 0
@@ -506,10 +506,10 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 0.4
-  m_LinearDamping: 0.3
-  m_AngularDamping: 3
-  m_GravityScale: 0
+  m_Mass: 0.1
+  m_LinearDamping: 0
+  m_AngularDamping: 0
+  m_GravityScale: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -693,9 +693,19 @@ MonoBehaviour:
   hungerSpeed: 8
   energyPerDegree: 0.02
   movementThresholdDegrees: 0.1
-  armPrefab: {fileID: 7668893783045156190, guid: 81824260b5408134cbf06975102d2ad9, type: 3}
-  spawnRadius: 0.1
+  maxSatiety: 100
+  satietyDecayRate: 10
+  maxConsumptionReduction: 0.8
+  armPrefab: {fileID: 7668893783045156190, guid: a1a5d71c6f44af340a9ba30b77884766, type: 3}
+  spawnRadius: 0.13
+  bodySpriteRenderers:
+  - {fileID: 4304925331309693059}
+  faceSpriteRenderers:
+  - {fileID: 878548138736248870}
+  - {fileID: 8540369027912479818}
   uiFollow: {fileID: 2312552536903357864}
+  currentBodyArmColor: {r: 1, g: 1, b: 1, a: 1}
+  currentFaceColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &2312552536903357864
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -743,4 +753,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   totalFitness: 0
-  gridSize: 2
+  currentCriteria:
+    criteriaName: "\u30A8\u30B5\u63A2\u7D22\u578B"
+    survivalRewardPerSec: 1
+    approachFoodReward: 20
+    escapeFoodPenalty: 2
+    horizontalMoveReward: 0
+    heightReward: 0
+    airTimeReward: 0
+    isUnlocked: 0
+    unlockCost: 100

@@ -22,6 +22,10 @@ public class CreatureAgent : MonoBehaviour
     public GameObject armPrefab;
     public float spawnRadius = 1.0f;
 
+    [Header("見た目の設定（インスペクターで割り当て）")]
+    public List<SpriteRenderer> bodySpriteRenderers = new List<SpriteRenderer>();
+    public List<SpriteRenderer> faceSpriteRenderers = new List<SpriteRenderer>();
+
     [Header("参照")]
     [SerializeField] private CreatureUIFollow uiFollow; 
 
@@ -32,6 +36,10 @@ public class CreatureAgent : MonoBehaviour
     private CreatureSensor sensor;
 
     private float pendingEnergyConsumption = 0f;
+    
+    // 現在の血統の色を記憶しておく変数
+    [HideInInspector] public Color currentBodyArmColor = Color.white;
+    [HideInInspector] public Color currentFaceColor = Color.white;
 
     void Awake()
     {
@@ -41,6 +49,28 @@ public class CreatureAgent : MonoBehaviour
     public void SetupAgent(EcosystemManager ecosystemManager)
     {
         manager = ecosystemManager;
+    }
+    
+    // 🎨 【新要素】マネージャーから色を受け取って適用する関数
+    public void SetColors(Color bodyColor, Color faceColor)
+    {
+        currentBodyArmColor = bodyColor;
+        currentFaceColor = faceColor;
+        ApplyColor(bodySpriteRenderers, currentBodyArmColor);
+        ApplyColor(faceSpriteRenderers, currentFaceColor);
+    }
+
+    private void ApplyColor(List<SpriteRenderer> renderers, Color color)
+    {
+        if (renderers == null)
+            return;
+
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            SpriteRenderer renderer = renderers[i];
+            if (renderer != null)
+                renderer.color = color;
+        }
     }
 
     void Start()
@@ -55,16 +85,12 @@ public class CreatureAgent : MonoBehaviour
 
         if (brain != null && sensor != null && joints != null)
         {
-            // 💡 【脳への入力アーキテクチャの拡張】：計5つの電気信号を脳に送る！
             float[] inputs = new float[5];
-            inputs[0] = sensor.dirToClosestFood.x;      // 1. エサの方向X
-            inputs[1] = sensor.dirToClosestFood.y;      // 2. エサの方向Y
-            inputs[2] = sensor.distanceToClosestFood;   // 3. エサへの距離
-            
-            // 🧠 【新・三半規管ジャイロ】自分の正面（transform.up）のワールド向きベクトルを渡す！
-            // これにより、脳は「今自分がどっちにどれくらい傾いているか」を100%自覚できるっす！
-            inputs[3] = transform.up.x;                 // 4. 自分の傾きX
-            inputs[4] = transform.up.y;                 // 5. 自分の傾きY
+            inputs[0] = sensor.dirToClosestFood.x;      
+            inputs[1] = sensor.dirToClosestFood.y;      
+            inputs[2] = sensor.distanceToClosestFood;   
+            inputs[3] = transform.up.x;                 
+            inputs[4] = transform.up.y;                 
 
             float[] outputs = brain.Evaluate(inputs);
 
@@ -125,8 +151,7 @@ public class CreatureAgent : MonoBehaviour
         CreatureGenome myGenome = inheritedGenome;
         if (myGenome == null)
         {
-            // 💡 多層化に伴い必要となる、大きめの初期サイズでゲノムを自動生成
-            int initialExpectedWeights = (5 * 12) + (12 * 4); // 入力5, 隠れ12, 初期想定関節4本想定
+            int initialExpectedWeights = (5 * 12) + (12 * 4); 
             myGenome = new CreatureGenome(initialExpectedWeights);
         }
 
@@ -160,6 +185,10 @@ public class CreatureAgent : MonoBehaviour
                     Vector3 spawnPos = lastSpawnPos + armDirection * spawnRadius;
                     GameObject armObj = Instantiate(armPrefab, spawnPos, armRotation, currentParent);
                     
+                    // 🎨 【新要素】動的に生成した腕の色を、血統の色に染める！
+                    SpriteRenderer armRenderer = armObj.GetComponent<SpriteRenderer>();
+                    if (armRenderer != null) armRenderer.color = currentBodyArmColor;
+
                     HingeJoint2D joint = armObj.GetComponent<HingeJoint2D>();
                     Rigidbody2D armRb = armObj.GetComponent<Rigidbody2D>();
 
@@ -277,13 +306,10 @@ public class CreatureAgent : MonoBehaviour
         CreatureGenome currentGenome = GetGenome();
         if (currentGenome == null) return;
 
-        // 最大24ノードまで強化可能にする
         if (currentGenome.hiddenNodeCount >= 24) return;
 
-        currentGenome.hiddenNodeCount += 2; // 1回につき2ノードずつ脳細胞を増やす
+        currentGenome.hiddenNodeCount += 2; 
 
-        // 脳のアップグレードは身体パーツを触らずに実行する。
-        // 現在の関節数（出力数）を維持したまま、新しい隠れノード数で脳のみ再生成する。
         int inputCount = 5;
         int outputCount = (joints != null) ? joints.Length : 0;
 
