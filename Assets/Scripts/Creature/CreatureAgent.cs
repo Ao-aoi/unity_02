@@ -188,11 +188,9 @@ public class CreatureAgent : MonoBehaviour
                 prevJointAngles[i] = joints[i] != null ? joints[i].jointAngle : 0f;
         }
 
-        // 🧠 【新・アーキテクチャ接続】：入力5つ、出力は生えた関節の総数！
         int inputCount = 5;            
         int outputCount = joints.Length; 
-
-        brain = new CreatureBrain(inputCount, outputCount);
+        brain = new CreatureBrain(inputCount, outputCount, myGenome.hiddenNodeCount);
         brain.LoadGenome(myGenome);
     }
 
@@ -272,6 +270,25 @@ public class CreatureAgent : MonoBehaviour
                 if (joint != null) Destroy(joint.gameObject);
         }
         InitializeBrain(newGenome);
+    }
+    
+    public void UpgradeBrainNodes()
+    {
+        CreatureGenome currentGenome = GetGenome();
+        if (currentGenome == null) return;
+
+        // 最大24ノードまで強化可能にする
+        if (currentGenome.hiddenNodeCount >= 24) return;
+
+        currentGenome.hiddenNodeCount += 2; // 1回につき2ノードずつ脳細胞を増やす
+
+        // 脳のアップグレードは身体パーツを触らずに実行する。
+        // 現在の関節数（出力数）を維持したまま、新しい隠れノード数で脳のみ再生成する。
+        int inputCount = 5;
+        int outputCount = (joints != null) ? joints.Length : 0;
+
+        brain = new CreatureBrain(inputCount, outputCount, currentGenome.hiddenNodeCount);
+        brain.LoadGenome(currentGenome);
     }
 }
 }

@@ -1,34 +1,41 @@
 using UnityEngine;
 using Neuro.Creature;
-using Neuro.UI; // UIを操作するために参照する
+using Neuro.UI; 
 
 namespace Neuro.Interaction
 {
     public class ShopController : MonoBehaviour
     {
         [Header("UIの参照")]
-        [Tooltip("画面に配置した ShopUIManager を割り当ててください")]
         public ShopUIManager shopUI; 
 
-        [Header("ポイント設定")]
-        [SerializeField] private int playerPoints = 100; // 現在のお財布
-        [SerializeField] private int armCost = 20;       // 手足を増やすコスト
-        [SerializeField] private int jointCost = 30;     // 関節を増やすコスト  
+        [Header("ポイント設定（コスト）")]
+        public int playerPoints = 300; // 初期お財布を少し大盛りの300にしておきます
+        public int armCost = 20;       
+        public int jointCost = 30;     
+        public int sightRangeUpgradeCost = 15;
+        public int fieldOfViewUpgradeCost = 15;
+        
+        // ★新要素：脳みそを賢くするアップグレードコスト！
+        public int brainUpgradeCost = 40; 
 
         private CreatureAgent currentCreature;
 
         void OnEnable()
         {
-            // 1. クリーチャーがタップされた時のイベントを購読
             CreatureSelector.OnCreatureSelected += HandleCreatureSelected;
             
-            // 2. UIのボタンが押された時のイベントを購読
             if (shopUI != null)
             {
                 shopUI.OnAddArmRequested += HandleAddArm;
                 shopUI.OnRemoveArmRequested += HandleRemoveArm;
                 shopUI.OnAddJointRequested += HandleAddJoint;
                 shopUI.OnRemoveJointRequested += HandleRemoveJoint;
+                shopUI.OnUpgradeSightRangeRequested += HandleUpgradeSightRange;
+                shopUI.OnUpgradeFieldOfViewRequested += HandleUpgradeFieldOfView;
+
+                // ★新要素：脳強化ボタンのイベントを購読
+                shopUI.OnUpgradeBrainRequested += HandleUpgradeBrain;
             }
         }
 
@@ -42,15 +49,18 @@ namespace Neuro.Interaction
                 shopUI.OnRemoveArmRequested -= HandleRemoveArm;
                 shopUI.OnAddJointRequested -= HandleAddJoint;
                 shopUI.OnRemoveJointRequested -= HandleRemoveJoint;
+                shopUI.OnUpgradeSightRangeRequested -= HandleUpgradeSightRange;
+                shopUI.OnUpgradeFieldOfViewRequested -= HandleUpgradeFieldOfView;
+
+                // ★新要素：イベント購読の解除
+                shopUI.OnUpgradeBrainRequested -= HandleUpgradeBrain;
             }
         }
 
-        // 👆 タップ選択された時の処理
         private void HandleCreatureSelected(CreatureAgent agent)
         {
             currentCreature = agent;
             
-            // 何もないところをタップされたらUIを閉じる
             if (agent == null)
             {
                 shopUI?.CloseShop();
@@ -61,7 +71,6 @@ namespace Neuro.Interaction
             }
         }
 
-        // 🎨 UIに最新データを渡して表示させる
         private void UpdateShopUI()
         {
             if (currentCreature != null && shopUI != null)
@@ -69,13 +78,12 @@ namespace Neuro.Interaction
                 CreatureGenome genome = currentCreature.GetGenome();
                 if (genome != null)
                 {
-                    // UI側は表示するだけで、ロジックは一切知らない
-                    shopUI.OpenShop(genome.generation, genome.armCount, genome.jointsPerArm, playerPoints);
+                    // ★脳のノード数（hiddenNodeCount）もUIに渡すように拡張！
+                    shopUI.OpenShop(genome.generation, genome.armCount, genome.jointsPerArm, genome.sightRange, genome.fieldOfViewAngle, genome.hiddenNodeCount, playerPoints);
                 }
             }
         }
 
-        // 🛠️ 「増やす」ボタンが押された時のロジック
         private void HandleAddArm()
         {
             if (currentCreature != null && playerPoints >= armCost)
@@ -83,15 +91,13 @@ namespace Neuro.Interaction
                 CreatureGenome genome = currentCreature.GetGenome();
                 if (genome != null && genome.armCount < CreatureLimits.MaxArms)
                 {
-                    playerPoints -= armCost; // ポイント消費
-                    currentCreature.AddArm(); // クリーチャーの改造を実行！
-                    
-                    UpdateShopUI(); // 画面を更新
+                    playerPoints -= armCost; 
+                    currentCreature.AddArm(); 
+                    UpdateShopUI(); 
                 }
             }
         }
 
-        // 🛠️ 「減らす」ボタンが押された時のロジック
         private void HandleRemoveArm()
         {
             if (currentCreature != null)
@@ -99,42 +105,79 @@ namespace Neuro.Interaction
                 CreatureGenome genome = currentCreature.GetGenome();
                 if (genome != null && genome.armCount > CreatureLimits.MinArms)
                 {
-                    // 今回は減らすのは無料っす
                     currentCreature.RemoveArm();
-                    
-                    UpdateShopUI(); // 画面を更新
+                    UpdateShopUI(); 
                 }
             }
         }
 
-        // 🛠️ 「関節を増やす」ボタンが押された時のロジック
         private void HandleAddJoint()
         {
             if (currentCreature != null && playerPoints >= jointCost)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.jointsPerArm < CreatureLimits.MaxJointsPerArm)
+                if (genome != null && genome.jointsPerArm < CreatureLimits.MaxJointsPerArm) 
                 {
-                    playerPoints -= jointCost; // ポイント消費
-                    currentCreature.AddJointSegment(); // クリーチャーの改造を実行！
-
-                    UpdateShopUI(); // 画面を更新
+                    playerPoints -= jointCost; 
+                    currentCreature.AddJointSegment(); 
+                    UpdateShopUI(); 
                 }
             }
         }
 
-        // 🛠️ 「関節を減らす」ボタンが押された時のロジック
         private void HandleRemoveJoint()
         {
             if (currentCreature != null)
             {
                 CreatureGenome genome = currentCreature.GetGenome();
-                if (genome != null && genome.jointsPerArm > CreatureLimits.MinJointsPerArm)
+                if (genome != null && genome.jointsPerArm > CreatureLimits.MinJointsPerArm) 
                 {
-                    // 今回は減らすのは無料っす
                     currentCreature.RemoveJointSegment();
+                    UpdateShopUI(); 
+                }
+            }
+        }
 
-                    UpdateShopUI(); // 画面を更新
+        private void HandleUpgradeSightRange()
+        {
+            if (currentCreature != null && playerPoints >= sightRangeUpgradeCost)
+            {
+                CreatureGenome genome = currentCreature.GetGenome();
+                if (genome != null && genome.sightRange < 15f)
+                {
+                    playerPoints -= sightRangeUpgradeCost; 
+                    currentCreature.UpgradeSightRange(1.0f); 
+                    UpdateShopUI(); 
+                }
+            }
+        }
+
+        private void HandleUpgradeFieldOfView()
+        {
+            if (currentCreature != null && playerPoints >= fieldOfViewUpgradeCost)
+            {
+                CreatureGenome genome = currentCreature.GetGenome();
+                if (genome != null && genome.fieldOfViewAngle < 180f)
+                {
+                    playerPoints -= fieldOfViewUpgradeCost; 
+                    currentCreature.UpgradeFieldOfView(15f); 
+                    UpdateShopUI(); 
+                }
+            }
+        }
+
+        // 🛠️ ★新要素：「脳をアップグレード」するロジック
+        private void HandleUpgradeBrain()
+        {
+            if (currentCreature != null && playerPoints >= brainUpgradeCost)
+            {
+                CreatureGenome genome = currentCreature.GetGenome();
+                // 最大24ノード未満なら実行
+                if (genome != null && genome.hiddenNodeCount < 24)
+                {
+                    playerPoints -= brainUpgradeCost; // ポイント消費
+                    currentCreature.UpgradeBrainNodes(); // 脳細胞を増やす！
+                    UpdateShopUI(); // 表示更新
                 }
             }
         }

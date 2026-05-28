@@ -1,7 +1,6 @@
 using UnityEngine;
 using Neuro.Creature;
 
-// 🧬 遺伝子（ゲノム）クラス
 [System.Serializable]
 public class CreatureGenome
 {
@@ -16,21 +15,29 @@ public class CreatureGenome
     public float sightRange;       
     public float fieldOfViewAngle; 
 
+    [Header("★脳の構造遺伝子")]
+    public int hiddenNodeCount; // 💡 新要素：中間層のノード数（脳のシワの量）
+
     [Header("脳の配線遺伝子")]
     public float[] weights; // 脳の全配線の強さ（重み）のデータ
 
+    // 新しく完全ランダムな遺伝子を作る（第1世代用）
     public CreatureGenome(int totalWeightsCount)
     {
         armCount = Random.Range(2, 4);     
         jointsPerArm = Random.Range(1, 3); 
         sightRange = 5f;        
         fieldOfViewAngle = 90f; 
+        
+        // 🧠 初期値はちょっとおバカな「4ノード」からスタートさせるっす！
+        hiddenNodeCount = 4; 
 
         weights = new float[totalWeightsCount];
         for (int i = 0; i < weights.Length; i++)
             weights[i] = Random.Range(-1f, 1f); 
     }
 
+    // 親の遺伝子を完全にコピーする
     public CreatureGenome Clone()
     {
         CreatureGenome clone = new CreatureGenome(this.weights.Length);
@@ -38,11 +45,16 @@ public class CreatureGenome
         clone.jointsPerArm = this.jointsPerArm;
         clone.sightRange = this.sightRange;
         clone.fieldOfViewAngle = this.fieldOfViewAngle;
+        
+        // 🧠 脳のサイズを子に引き継ぐ
+        clone.hiddenNodeCount = this.hiddenNodeCount;
+
         clone.generation = this.generation + 1;
         System.Array.Copy(this.weights, clone.weights, this.weights.Length);
         return clone;
     }
 
+    // 🔥 突然変異（Mutation）をさせるAPI
     public void Mutate(float mutationRate, float mutationAmount)
     {
         for (int i = 0; i < weights.Length; i++)
@@ -71,35 +83,50 @@ public class CreatureGenome
 
         if (Random.value < mutationRate)
             fieldOfViewAngle = Mathf.Clamp(fieldOfViewAngle + Random.Range(-10f, 10f), 30f, 180f);
+
+        // 🧠 ★新要素：脳のシワ（中間層）の突然変異（10%の確率で±1ノード変化する）
+        if (Random.value < mutationRate)
+        {
+            int delta = (Random.value < 0.5f) ? 1 : -1;
+            hiddenNodeCount = Mathf.Clamp(hiddenNodeCount + delta, 2, 24); // 最小2、最大24
+            Debug.Log($"🧬 突然変異により、生まれつき脳のキャパ（中間層）が {hiddenNodeCount} に変化した天才が誕生！");
+        }
     }
 }
 
-// 🧠 【大進化】隠れ層（中間層）を搭載した多層ニューラルネットワーク脳
+// 🧠 隠れ層（中間層）のサイズを動的に変更できるようにした新しい脳
 public class CreatureBrain
 {
     private int inputCount;
     private int outputCount;
-    private int hiddenCount = 12; // 💡 中間層のノード数（複雑なジャンプ運動の学習に最適なサイズ）
+    private int hiddenCount; // 💡 遺伝子から可変で受け取る
     private CreatureGenome genome;
 
-    public CreatureBrain(int inputs, int outputs)
+    public CreatureBrain(int inputs, int outputs, int hCount)
     {
         inputCount = inputs;
         outputCount = outputs;
+        hiddenCount = hCount; // 💡 確定したサイズを入れる
 
-        // 💡 【重要】多層ネットワークに必要な配線総数を計算
-        // (入力 ➔ 中間) + (中間 ➔ 出力) 
         int totalWeights = (inputCount * hiddenCount) + (hiddenCount * outputCount);
         genome = new CreatureGenome(totalWeights);
+        genome.hiddenNodeCount = hiddenCount; // 遺伝子側にも同期
     }
 
     public void LoadGenome(CreatureGenome newGenome)
     {
+        // 💡 遺伝子データ側に記録されている脳のサイズを最優先で適用するっす！
+        if (newGenome != null)
+        {
+            hiddenCount = newGenome.hiddenNodeCount;
+        }
+
         int expectedWeights = (inputCount * hiddenCount) + (hiddenCount * outputCount);
 
         if (newGenome == null)
         {
             this.genome = new CreatureGenome(expectedWeights);
+            this.genome.hiddenNodeCount = hiddenCount;
             return;
         }
 
@@ -109,13 +136,14 @@ public class CreatureBrain
             return;
         }
 
-        // 🛠️ 手足や関節が増減しても、古い脳の配線を安全に引き継ぐオートマジックリサイズ
+        // 🛠️ 脳のノード数や手足が変わったときに、配線を安全に自動リサイズして引き継ぐ
         CreatureGenome adjusted = new CreatureGenome(expectedWeights);
         adjusted.armCount = newGenome.armCount;
         adjusted.jointsPerArm = newGenome.jointsPerArm;
         adjusted.sightRange = newGenome.sightRange;
         adjusted.fieldOfViewAngle = newGenome.fieldOfViewAngle;
         adjusted.generation = newGenome.generation;
+        adjusted.hiddenNodeCount = hiddenCount; // 💡 新しいサイズを確定
 
         if (newGenome.weights != null)
         {
@@ -130,7 +158,6 @@ public class CreatureBrain
 
     public CreatureGenome GetGenome() => genome;
 
-    // ⚙️ 【脳の思考ロジック】多層フォワードプロパゲーション
     public float[] Evaluate(float[] inputs)
     {
         // --- 1層目: 入力層 ➔ 中間層 ---
@@ -144,8 +171,7 @@ public class CreatureBrain
             {
                 sum += inputs[i] * genome.weights[wIndex++];
             }
-            // 活性化関数: 軽量なReLU（0以下をカット）を挟むことで、脳に「複雑な条件分岐」の能力を与えるっす！
-            hiddenOutputs[h] = Mathf.Max(0f, sum); 
+            hiddenOutputs[h] = Mathf.Max(0f, sum); // ReLU
         }
 
         // --- 2層目: 中間層 ➔ 出力層 ---
@@ -157,7 +183,6 @@ public class CreatureBrain
             {
                 sum += hiddenOutputs[h] * genome.weights[wIndex++];
             }
-            // 最終出力はモーター速度（-1.0 〜 +1.0）
             outputs[o] = Mathf.Max(-1f, Mathf.Min(1f, sum));
         }
 
