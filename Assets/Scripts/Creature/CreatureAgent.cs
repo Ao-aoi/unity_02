@@ -62,7 +62,6 @@ public class CreatureAgent : MonoBehaviour
 
             float[] outputs = brain.Evaluate(inputs);
 
-            // 🧠 すべての関節モーターを脳の出力で駆動
             for (int i = 0; i < joints.Length; i++)
             {
                 HingeJoint2D joint = joints[i];
@@ -120,7 +119,7 @@ public class CreatureAgent : MonoBehaviour
         }
     }
 
-    // 🐣 【神の多関節パーツ生成】
+    // 🐣 【神の多関節パーツ生成・完全版】
     public void InitializeBrain(CreatureGenome inheritedGenome = null)
     {
         Rigidbody2D bodyRb = GetComponent<Rigidbody2D>();
@@ -132,48 +131,57 @@ public class CreatureAgent : MonoBehaviour
         CreatureGenome myGenome = inheritedGenome;
         if (myGenome == null)
         {
-            // 多関節化に伴い配線数が多くなるため、初期配列サイズを余裕を持って200にしておきます
             myGenome = new CreatureGenome(200);
         }
 
         List<HingeJoint2D> spawnedJoints = new List<HingeJoint2D>();
 
-        // 🧬 遺伝子（armCount と jointsPerArm）を読み込んで多関節の足を生やす！
+        // 🧬 遺伝子を読み込んで多関節の足を生やす
         if (armPrefab != null && bodyRb != null)
         {
             int armsToSpawn = myGenome.armCount;
-            int segmentsPerArm = myGenome.jointsPerArm; // 1本の足の中のパーツ数
+            int segmentsPerArm = myGenome.jointsPerArm; 
+            float angleStep = 360f / armsToSpawn;
 
             for (int i = 0; i < armsToSpawn; i++)
             {
-                // 1. 胴体から生やす根本の角度と方向を計算
-                float angle = i * (360f / armsToSpawn) * Mathf.Deg2Rad;
-                Vector3 armDirection = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
+                // 1. 胴体から生やす根本の角度と方向（ベクトル）を計算
+                float angle = i * angleStep * Mathf.Deg2Rad;
+                Vector2 anchorDirection = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                Vector3 armDirection = new Vector3(anchorDirection.x, anchorDirection.y, 0f);
+                Quaternion armRotation = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, Vector3.forward);
 
-                // 繋ぎ先を最初は「胴体（bodyRb）」にする
+                // 💡 足ごとに毎回、接続先を「胴体」の位置と情報に初期化リセット！
                 Rigidbody2D previousConnectedBody = bodyRb;
                 Vector3 lastSpawnPos = bodyRb.transform.position;
                 Transform currentParent = bodyRb.transform;
 
-                // 💡 【直列ループ】設定された関節の数だけ、外側に向かって数珠繋ぎに生やすっす！
+                // 💡 1本の足の中で関節の数だけ外側に向かって直列に生やすループ
                 for (int j = 0; j < segmentsPerArm; j++)
                 {
-                    // 根本からj番目のパーツの生成位置を計算（どんどん外側に伸びる）
+                    // 根本からj番目のパーツの生成位置を計算（外側にどんどんズラす）
+                    // 1つ目の腕の長さが0.2の場合、spawnRadiusの数値を調整するか、ここで直接0.2fなどをかけても綺麗に繋がります
                     Vector3 spawnPos = lastSpawnPos + armDirection * spawnRadius;
 
-                    GameObject armObj = Instantiate(armPrefab, spawnPos, Quaternion.identity, currentParent);
+                    GameObject armObj = Instantiate(armPrefab, spawnPos, armRotation, currentParent);
                     
                     HingeJoint2D joint = armObj.GetComponent<HingeJoint2D>();
                     Rigidbody2D armRb = armObj.GetComponent<Rigidbody2D>();
 
                     if (joint != null && previousConnectedBody != null)
                     {
-                        // 🔗 1つ前のパーツのRigidbodyと自分をガッチャンコ！
+                        joint.autoConfigureConnectedAnchor = false;
+
                         joint.connectedBody = previousConnectedBody;
+                        if (j == 0)
+                        {
+                            joint.connectedAnchor = anchorDirection * spawnRadius;
+                        }
+
                         spawnedJoints.Add(joint);     
                     }
 
-                    // 次のループのために「1つ前のパーツ」の情報を自分に更新する
+                    // 次のループのために「1つ前のパーツ」の情報に自分をセット
                     previousConnectedBody = armRb;
                     lastSpawnPos = spawnPos;
                     if (armRb != null) currentParent = armRb.transform;
@@ -192,7 +200,7 @@ public class CreatureAgent : MonoBehaviour
             }
         }
 
-        // 🧠 生えた【全関節の総数】に合わせて脳みそをピッタリのサイズで自動再構築！
+        // 🧠 脳みその自動再構築
         int inputCount = 3;            
         int outputCount = joints.Length; 
 
@@ -223,7 +231,6 @@ public class CreatureAgent : MonoBehaviour
         return null;
     }
 
-    // 🛠️ 【ショップ用API】関節（足の長さ）を1段階増やす
     public void AddJointSegment()
     {
         CreatureGenome currentGenome = GetGenome();
@@ -233,7 +240,6 @@ public class CreatureAgent : MonoBehaviour
         RebuildBody(currentGenome);
     }
 
-    // 🛠️ 【ショップ用API】関節（足の長さ）を1段階減らす
     public void RemoveJointSegment()
     {
         CreatureGenome currentGenome = GetGenome();
@@ -243,7 +249,6 @@ public class CreatureAgent : MonoBehaviour
         RebuildBody(currentGenome);
     }
 
-    // 🛠️ 既存のAddArm / RemoveArmも多関節を維持したまま動くように、内部でRebuildBodyを呼ぶだけでOK
     public void AddArm()
     {
         CreatureGenome currentGenome = GetGenome();
