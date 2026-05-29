@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using Neuro.Creature.EvolutionBuild;
 
 namespace Neuro.Creature
 {
@@ -15,6 +16,8 @@ namespace Neuro.Creature
         [Header("アンロック設定")]
         [Tooltip("このアイテムを拾った時にプレイヤーが獲得（アンロック）する新しい評価ルールを割り当てます")]
         public ScriptableObject unlockableRule; // EvaluationRule などがセットされます
+        public UnlockableEvaluationRule unlockableEvaluationRule;
+        public EvaluationInventory targetInventory;
 
         [Header("演出")]
         public GameObject collectEffectPrefab;
@@ -33,6 +36,15 @@ namespace Neuro.Creature
                 if (unlockableRule != null)
                 {
                     OnRuleUnlocked?.Invoke(unlockableRule);
+                }
+
+                if (unlockableEvaluationRule != null)
+                {
+                    EvaluationInventory inventory = targetInventory != null ? targetInventory : EvaluationInventoryProvider.ActiveInventory;
+                    if (inventory != null)
+                        inventory.Unlock(unlockableEvaluationRule);
+
+                    EvaluationRuleUnlock.NotifyRuleUnlocked(unlockableEvaluationRule);
                 }
 
                 // 3. エフェクトを出して消滅

@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb4b997acaf046d7ad4312a45102e6e1, type: 3}
+  m_Name: ExplorationSpawnProfile
+  m_EditorClassIdentifier: 
+  profileName: "探索型スポーン"
+  description: "探索距離、好奇心、滞留回避を重視する地域用のサンプルSpawnPointプロファイル。"
+  ruleSet:
+    baseProfile: {fileID: 11400000, guid: 52727ade47af43b58afa74b75c414797, type: 2}
+    additionalRules:
+    - rule: {fileID: 11400000, guid: e943b583f8624a4aa3b25752fa574a8c, type: 2}
+      weight: 1.4
+      enabled: 1
+    - rule: {fileID: 11400000, guid: fe5ad5b58e55454eb3253c0ee733a5a5, type: 2}
+      weight: 1.2
+      enabled: 1
+  behavior:
+    desiredCreatureCount: 5
+    spawnRadius: 4
+    elitePoolSize: 8
+    mutationRate: 0.1
+    mutationAmount: 0.2
+    mutationBias:
+      weightMutationRateMultiplier: 1
+      weightMutationAmountMultiplier: 1
+      structuralMutationMultiplier: 1.1
+      limbMutationMultiplier: 1
+      sensorMutationMultiplier: 1.3
+      brainMutationMultiplier: 1.15
+    lineageSource: {fileID: 0}
+    fallbackLineage:
+      lineageId: exploration_sample_lineage
+      lineageName: "探索系統"
+      lineageColor: {r: 0.3, g: 1, b: 0.45, a: 1}
+      parentLineageId: 
+      sourceCreatureName: 
+    bodyArmColor: {r: 0.3, g: 1, b: 0.45, a: 1}
+    faceColor: {r: 0.05, g: 0.15, b: 0.05, a: 1}

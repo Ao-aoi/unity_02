@@ -45,23 +45,32 @@
 
 [-] ショップ改造UI: スマホ画面上で個体をタップ選択し、エサやポイントを消費して「手足を増やす/減らす」「感覚（目・耳・第六感）を追加する」など、パズル感覚で身体を組み替えるエディタUIの実装。
 
-[ ] フェーズ5：環境ビルド ＆ 系統誘導システム
+[x] フェーズ5：環境ビルド ＆ 系統誘導システム
 目標: 
 プレイヤーが単に個体を改造するだけでなく、「新しい進化のルール」を集めて組み合わせ、独自の環境（スポーンポイント）をパズルのように構築して生態系をコントロールする。
 
 やること:
 
-[ ] 新ルールのアイテム化と収集 (Collectible Evaluations):
+[x] 新ルールのアイテム化と収集 (Collectible Evaluations):
 フィールド上に「スピードの欠片」「ジャンプの欠片」などの特殊アイテムを出現させる。クリーチャーがこれらを拾うことで、新しい「評価基準（Evaluation Rule）」がプレイヤーの手持ち（インベントリ）としてアンロックされる。
 
-[ ] カスタムスポーンポイントのビルド:
+[x] カスタムスポーンポイントのビルド:
 アンロックされた複数の評価基準（例：「エサ探索」＋「ジャンプ力」）をプレイヤーが自由に組み合わせ、新しいスポーンポイントをフィールドに設置・カスタマイズできるシステムを作る。
 
-[ ] 個体保存と血統の割り当て:
+[x] 個体保存と血統の割り当て:
 プレイヤーが気に入った優秀な個体（親）を保存し、構築したカスタムスポーンポイントにセットすることで、「指定した環境ルールで、指定した親から進化し続ける独自の血統」を生み出せるようにする。
 
-[ ] 生態系環境ギミック:
+[x] 生態系環境ギミック:
 地形ギミック（壁、段差、空中足場など）とカスタムスポーンポイントを組み合わせることで、「この地形を乗り越えるための進化」をプレイヤー自身がデザインする。
+
+
+実装メモ（Phase 5）:
+
+- EvaluationRule は UnlockableEvaluationRule / EvaluationInventory / EvaluationRuleUnlock により、フィールド上の欠片Prefabからアンロック可能。
+- SpawnEvolutionProfile / SpawnRuleSet / SpawnBehaviorSettings / CustomSpawnPoint により、スポーン地点ごとに評価ルール、重み、突然変異バイアス、血統ソースを保持可能。
+- SavedCreatureData / CreatureArchive / LineageData により、有望個体のGenome・色・名前・系統ID・評価履歴をRuntime保存し、SpawnPointの祖先として再利用可能。
+- EnvironmentZone / BridgeTraversalReward / HazardPenaltyZone / FrictionZone と EnvironmentInteractionRule により、Trigger/Colliderベースの環境ギミックを評価へ接続可能。
+- サンプルとして Assets/EvolutionBuild/SpawnProfiles と Assets/EvolutionBuild/SpawnPoints に「高速移動型スポーン」「探索型スポーン」を追加済み。
 
 [ ] フェーズ6：系統保存と生態系誘導システム
 

@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 using Neuro.Creature.Evaluation;
+using Neuro.Creature.EvolutionBuild;
 
 namespace Neuro.Creature{
 public class EcosystemManager : MonoBehaviour
@@ -13,16 +14,40 @@ public class EcosystemManager : MonoBehaviour
     {
         public Transform pointTransform; // スポーンする場所
         public EvaluationProfile pointEvaluationProfile; // 複数ルールを組み合わせる新評価プロファイル
+        public CustomSpawnPoint customSpawnPoint; // フェーズ5: Runtime/Inspector編集可能なスポーンポイント
+        public SpawnEvolutionProfile spawnEvolutionProfile; // Transformだけで運用する場合のSOプロファイル
         [Tooltip("このスポーンポイントで常に維持する個体数。0以下ならマネージャーの初期生成数を使う")] public int creatureCount = -1;
         
         [Header("見た目の設定")]
         public Color bodyArmColor = Color.white; // 胴体と腕の色
         public Color faceColor = Color.white;    // 顔の色
+        public LineageData lineage = new LineageData("Spawn Lineage", Color.white);
         
         [Header("遺伝設定（-1でマネージャーのデフォルトを使用）")]
         [Tooltip("スポーンポイント固有の重み変異確率。-1でマネージャーの値を使用")] public float mutationRate = -1f;
         [Tooltip("スポーンポイント固有の重み変化量。-1でマネージャーの値を使用")] public float mutationAmount = -1f;
         [Tooltip("スポーンポイント固有のエリートプールサイズ。-1でマネージャーの値を使用")] public int genomePoolSize = -1;
+
+        public SpawnBehaviorSettings ResolveBehavior()
+        {
+            if (customSpawnPoint != null) return customSpawnPoint.Behavior;
+            if (spawnEvolutionProfile != null) return spawnEvolutionProfile.behavior;
+            return null;
+        }
+
+        public EvaluationProfile BuildEvaluationProfile()
+        {
+            if (customSpawnPoint != null) return customSpawnPoint.BuildEvaluationProfile();
+            if (spawnEvolutionProfile != null) return spawnEvolutionProfile.CreateRuntimeEvaluationProfile();
+            return pointEvaluationProfile;
+        }
+
+        public LineageData ResolveLineage()
+        {
+            if (customSpawnPoint != null) return customSpawnPoint.ResolveLineage(bodyArmColor);
+            if (spawnEvolutionProfile != null) return spawnEvolutionProfile.ResolveLineage();
+            return lineage != null ? lineage.CloneForChild() : LineageData.CreateRuntime("Spawn Lineage", bodyArmColor);
+        }
     }
     public static event Action<float> CreatureDied;
 
@@ -89,8 +114,11 @@ public class EcosystemManager : MonoBehaviour
 
         SpawnPointConfig chosenSpawn = spawnPoints[spawnIndex];
 
-        Vector3 spawnOrigin = chosenSpawn != null && chosenSpawn.pointTransform != null ? chosenSpawn.pointTransform.position : Vector3.zero;
-        Vector3 randomOffset = new Vector3(UnityEngine.Random.Range(-3f, 3f), UnityEngine.Random.Range(-3f, 3f), 0);
+        Transform spawnTransform = chosenSpawn != null && chosenSpawn.customSpawnPoint != null ? chosenSpawn.customSpawnPoint.transform : (chosenSpawn != null ? chosenSpawn.pointTransform : null);
+        Vector3 spawnOrigin = spawnTransform != null ? spawnTransform.position : Vector3.zero;
+        SpawnBehaviorSettings behavior = chosenSpawn != null ? chosenSpawn.ResolveBehavior() : null;
+        float spawnRadius = behavior != null ? behavior.spawnRadius : 3f;
+        Vector3 randomOffset = new Vector3(UnityEngine.Random.Range(-spawnRadius, spawnRadius), UnityEngine.Random.Range(-spawnRadius, spawnRadius), 0);
         Vector3 spawnPos = spawnOrigin + randomOffset;
 
         GameObject newCreature = Instantiate(creaturePrefab, spawnPos, Quaternion.identity);
@@ -103,12 +131,15 @@ public class EcosystemManager : MonoBehaviour
             // 💡 【新要素】選ばれたスポーンポイントの色をクリーチャーに渡す！
             if (chosenSpawn != null)
             {
-                agent.SetColors(chosenSpawn.bodyArmColor, chosenSpawn.faceColor);
+                Color bodyColor = behavior != null ? behavior.bodyArmColor : chosenSpawn.bodyArmColor;
+                Color faceColor = behavior != null ? behavior.faceColor : chosenSpawn.faceColor;
+                agent.SetColors(bodyColor, faceColor);
+                agent.SetLineage(chosenSpawn.ResolveLineage());
             }
             // origin を記録
             agent.originSpawnIndex = spawnIndex;
             
-            // 親ゲノムが指定されていなければ、そのスポーンポイントのエリートプールから選ぶ
+            // 親ゲノムが指定されていなければ、そのスポーンポイントのエリートプール/保存血統から選ぶ
             if (parentGenome == null && eliteGenomesPerSpawn != null && spawnIndex >= 0 && spawnIndex < eliteGenomesPerSpawn.Length)
             {
                 var pool = eliteGenomesPerSpawn[spawnIndex];
@@ -121,8 +152,21 @@ public class EcosystemManager : MonoBehaviour
                     float useMutRate = (chosenSpawn != null && chosenSpawn.mutationRate >= 0f) ? chosenSpawn.mutationRate : mutationRate;
                     float useMutAmount = (chosenSpawn != null && chosenSpawn.mutationAmount >= 0f) ? chosenSpawn.mutationAmount : mutationAmount;
 
-                    parentGenome = CreatureAgent.ApplyDetailedMutation(parent, useMutRate, useMutAmount, CreatureAgent.DefaultMutationConfig);
+                    if (chosenSpawn != null && chosenSpawn.customSpawnPoint != null)
+                        parentGenome = chosenSpawn.customSpawnPoint.CreateDescendantGenome(parent, useMutRate, useMutAmount);
+                    else if (chosenSpawn != null && chosenSpawn.spawnEvolutionProfile != null)
+                        parentGenome = chosenSpawn.spawnEvolutionProfile.CreateAncestorGenome(useMutRate, useMutAmount, parent);
+                    else
+                        parentGenome = CreatureAgent.ApplyDetailedMutation(parent, useMutRate, useMutAmount, CreatureAgent.DefaultMutationConfig);
                 }
+            }
+
+            if (parentGenome == null && chosenSpawn != null)
+            {
+                if (chosenSpawn.customSpawnPoint != null)
+                    parentGenome = chosenSpawn.customSpawnPoint.CreateDescendantGenome(null, mutationRate, mutationAmount);
+                else if (chosenSpawn.spawnEvolutionProfile != null)
+                    parentGenome = chosenSpawn.spawnEvolutionProfile.CreateAncestorGenome(mutationRate, mutationAmount);
             }
 
             agent.InitializeBrain(parentGenome);
@@ -130,8 +174,9 @@ public class EcosystemManager : MonoBehaviour
             CreatureEvaluator evaluator = newCreature.GetComponent<CreatureEvaluator>();
             if (evaluator != null && chosenSpawn != null)
             {
-                if (chosenSpawn.pointEvaluationProfile != null)
-                    evaluator.evaluationProfile = chosenSpawn.pointEvaluationProfile;
+                EvaluationProfile profile = chosenSpawn.BuildEvaluationProfile();
+                if (profile != null)
+                    evaluator.SetEvaluationProfile(profile);
             }
 
             Slider sliderComponent = agent.InitializeUIFollow(sliderCanvas);
@@ -162,11 +207,17 @@ public class EcosystemManager : MonoBehaviour
                 if (eliteGenomesPerSpawn != null && origin >= 0 && origin < eliteGenomesPerSpawn.Length)
                 {
                     var pool = eliteGenomesPerSpawn[origin];
-                    pool.Add(new GenomeRecord { fitness = finalFitness, genome = deadGenome });
+                    pool.Add(new GenomeRecord { fitness = finalFitness, genome = deadGenome.CopyExact() });
 
                     int poolSize = genomePoolSize;
-                    if (spawnPoints != null && origin >= 0 && origin < spawnPoints.Length && spawnPoints[origin] != null && spawnPoints[origin].genomePoolSize >= 0)
-                        poolSize = spawnPoints[origin].genomePoolSize;
+                    if (spawnPoints != null && origin >= 0 && origin < spawnPoints.Length && spawnPoints[origin] != null)
+                    {
+                        SpawnBehaviorSettings behavior = spawnPoints[origin].ResolveBehavior();
+                        if (behavior != null)
+                            poolSize = behavior.elitePoolSize;
+                        else if (spawnPoints[origin].genomePoolSize >= 0)
+                            poolSize = spawnPoints[origin].genomePoolSize;
+                    }
 
                     eliteGenomesPerSpawn[origin] = pool.OrderByDescending(g => g.fitness).Take(poolSize).ToList();
                 }
@@ -207,7 +258,14 @@ public class EcosystemManager : MonoBehaviour
             return 0;
 
         SpawnPointConfig spawnPoint = spawnPoints[spawnIndex];
-        if (spawnPoint == null || spawnPoint.creatureCount < 0)
+        if (spawnPoint == null)
+            return 0;
+
+        SpawnBehaviorSettings behavior = spawnPoint.ResolveBehavior();
+        if (behavior != null)
+            return Mathf.Max(0, behavior.desiredCreatureCount);
+
+        if (spawnPoint.creatureCount < 0)
             return Mathf.Max(0, maxCreaturesCount);
 
         return spawnPoint.creatureCount;
