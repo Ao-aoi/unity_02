@@ -701,22 +701,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   creaturePrefab: {fileID: 9148087301850144497, guid: 359863a4f851d784ba69150737ab953e, type: 3}
   sliderCanvas: {fileID: 1653310464}
-  maxCreaturesCount: 10
+  maxCreaturesCount: 3
   spawnPoints:
   - pointTransform: {fileID: 1295842592}
     pointCriteria:
       criteriaName: "\u30A8\u30B5\u63A2\u7D22\u578B"
-      survivalRewardPerSec: 1
+      survivalRewardPerSec: 0.1
       approachFoodReward: 20
       escapeFoodPenalty: 2
-      horizontalMoveReward: 0
-      heightReward: 0
-      airTimeReward: 0
+      horizontalMoveReward: 2
+      heightReward: 2
+      airTimeReward: 2
       stationaryPenaltyPerSec: 0.5
       stationaryThresholdSeconds: 2
       stationaryMovementEpsilon: 0.01
       isUnlocked: 0
       unlockCost: 100
+    pointEvaluationProfile: {fileID: 11400000, guid: 52727ade47af43b58afa74b75c414797, type: 2}
     creatureCount: -1
     bodyArmColor: {r: 0.8490566, g: 0.7531487, b: 0.33374858, a: 1}
     faceColor: {r: 0.1573513, g: 0.18744849, b: 0.32704395, a: 1}
@@ -726,17 +727,18 @@ MonoBehaviour:
   - pointTransform: {fileID: 8218826}
     pointCriteria:
       criteriaName: "\u30B8\u30E3\u30F3\u30D7\u578B"
-      survivalRewardPerSec: 0.4
-      approachFoodReward: 0
-      escapeFoodPenalty: 0
-      horizontalMoveReward: 0
+      survivalRewardPerSec: 0.1
+      approachFoodReward: 8
+      escapeFoodPenalty: 3
+      horizontalMoveReward: 2
       heightReward: 4
-      airTimeReward: 4
+      airTimeReward: 8
       stationaryPenaltyPerSec: 0
       stationaryThresholdSeconds: 1
       stationaryMovementEpsilon: 0.01
       isUnlocked: 1
       unlockCost: 100
+    pointEvaluationProfile: {fileID: 11400000, guid: 54f9ae3c487345918fb34d6577e41cbc, type: 2}
     creatureCount: -1
     bodyArmColor: {r: 0.28930807, g: 0.1865036, b: 0.19267662, a: 1}
     faceColor: {r: 0.9433962, g: 0.9085709, b: 0.83362997, a: 1}
@@ -823,7 +825,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &237979586
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3059,9 +3061,9 @@ RectTransform:
   - {fileID: 1863484545}
   m_Father: {fileID: 1653310465}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -162, y: -126}
+  m_AnchorMin: {x: 1, y: 1}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: -87, y: -44}
   m_SizeDelta: {x: 160, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1279440459

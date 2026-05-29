@@ -31,7 +31,7 @@ namespace Neuro.Creature.Evaluation
 
         public virtual void Initialize(CreatureEvaluationContext context) { }
 
-        public float Tick(CreatureEvaluationContext context)
+        public virtual float Tick(CreatureEvaluationContext context)
         {
             if (rule == null || !rule.enabled)
                 return 0f;

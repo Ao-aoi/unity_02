@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 838b42dbb48648eb9310b55d737bd237, type: 3}
-  m_Name: 探索型
+  m_Name: ExplorationProfile
   m_EditorClassIdentifier: 
-  profileName: 探索型
-  description: 未探索セル、好奇心ターゲット、エサ接近を重視し、同じ場所への滞在を減点します。
+  profileName: "\u63A2\u7D22\u578B"
+  description: "\u672A\u63A2\u7D22\u30BB\u30EB\u3001\u597D\u5947\u5FC3\u30BF\u30FC\u30B2\u30C3\u30C8\u3001\u30A8\u30B5\u63A5\u8FD1\u3092\u91CD\u8996\u3057\u3001\u540C\u3058\u5834\u6240\u3078\u306E\u6EDE\u5728\u3092\u6E1B\u70B9\u3057\u307E\u3059\u3002"
   rules:
   - {fileID: 11400000, guid: 7212ba49ea694b34830c522bb5e5a696, type: 2}
   - {fileID: 11400000, guid: e943b583f8624a4aa3b25752fa574a8c, type: 2}
