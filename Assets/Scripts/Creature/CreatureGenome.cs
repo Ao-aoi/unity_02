@@ -21,6 +21,11 @@ public class CreatureGenome
     [Header("脳の配線遺伝子")]
     public float[] weights; // 脳の全配線の強さ（重み）のデータ
 
+    [Header("系統情報")]
+    public string lineageId;
+    public string parentLineageId;
+    public string lineageName;
+
     // 新しく完全ランダムな遺伝子を作る（第1世代用）
     public CreatureGenome(int totalWeightsCount)
     {
@@ -40,7 +45,7 @@ public class CreatureGenome
     // 親の遺伝子を完全にコピーする
     public CreatureGenome Clone()
     {
-        CreatureGenome clone = new CreatureGenome(this.weights.Length);
+        CreatureGenome clone = new CreatureGenome(this.weights != null ? this.weights.Length : 0);
         clone.armCount = this.armCount;
         clone.jointsPerArm = this.jointsPerArm;
         clone.sightRange = this.sightRange;
@@ -50,8 +55,18 @@ public class CreatureGenome
         clone.hiddenNodeCount = this.hiddenNodeCount;
 
         clone.generation = this.generation + 1;
-        System.Array.Copy(this.weights, clone.weights, this.weights.Length);
+        clone.lineageId = this.lineageId;
+        clone.parentLineageId = this.parentLineageId;
+        clone.lineageName = this.lineageName;
+        if (this.weights != null) System.Array.Copy(this.weights, clone.weights, this.weights.Length);
         return clone;
+    }
+
+    public CreatureGenome CopyExact()
+    {
+        CreatureGenome copy = Clone();
+        copy.generation = this.generation;
+        return copy;
     }
 
     // 🔥 突然変異（Mutation）をさせるAPI

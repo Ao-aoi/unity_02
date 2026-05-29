@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb4b997acaf046d7ad4312a45102e6e1, type: 3}
+  m_Name: FastMovementSpawnProfile
+  m_EditorClassIdentifier: 
+  profileName: "高速移動型スポーン"
+  description: "高速移動と安定性を重視する地域用のサンプルSpawnPointプロファイル。"
+  ruleSet:
+    baseProfile: {fileID: 11400000, guid: 54f9ae3c487345918fb34d6577e41cbc, type: 2}
+    additionalRules:
+    - rule: {fileID: 11400000, guid: 91a6f548a9214cdba3992ef957c59e74, type: 2}
+      weight: 1.5
+      enabled: 1
+    - rule: {fileID: 11400000, guid: c65df4c62345401fbd14942e5ac258b1, type: 2}
+      weight: 1.0
+      enabled: 1
+  behavior:
+    desiredCreatureCount: 5
+    spawnRadius: 3
+    elitePoolSize: 6
+    mutationRate: 0.12
+    mutationAmount: 0.22
+    mutationBias:
+      weightMutationRateMultiplier: 1.1
+      weightMutationAmountMultiplier: 1
+      structuralMutationMultiplier: 1
+      limbMutationMultiplier: 1.2
+      sensorMutationMultiplier: 1
+      brainMutationMultiplier: 0.9
+    lineageSource: {fileID: 0}
+    fallbackLineage:
+      lineageId: fast_movement_sample_lineage
+      lineageName: "高速移動系統"
+      lineageColor: {r: 0.2, g: 0.65, b: 1, a: 1}
+      parentLineageId: 
+      sourceCreatureName: 
+    bodyArmColor: {r: 0.2, g: 0.65, b: 1, a: 1}
+    faceColor: {r: 1, g: 1, b: 1, a: 1}

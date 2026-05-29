@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Neuro.Creature.Evaluation;
+using Neuro.Creature.EvolutionBuild;
+using Neuro.Creature.Environment;
 using System.Collections.Generic;
 
 namespace Neuro.Creature{   
@@ -69,6 +71,10 @@ public class CreatureAgent : MonoBehaviour
         public float nodeAddBase = 0.02f;
         public float nodeRemoveBase = 0.01f;
 
+        [Header("感覚の変化確率（ベース）")]
+        public float sightRangeChangeBase = 0.02f;
+        public float fieldOfViewChangeBase = 0.02f;
+
         [Header("ポアソン分布のλ（1回の個体変異で変える期待個数）")]
         public float poissonLambda = 0.2f;
 
@@ -86,9 +92,19 @@ public class CreatureAgent : MonoBehaviour
     // どのスポーンポイントから生まれたか（EcosystemManager がセットする）
     [HideInInspector] public int originSpawnIndex = -1;
 
+    [Header("系統情報")]
+    [SerializeField] private LineageData lineage = new LineageData("Wild Lineage", Color.white);
+    public string lineageId;
+    public string parentLineageId;
+    public string lineageName;
+    public Color lineageColor = Color.white;
+    public LineageData Lineage => lineage;
+
     void Awake()
     {
         sensor = GetComponent<CreatureSensor>();
+        if (GetComponent<CreatureEnvironmentTracker>() == null)
+            gameObject.AddComponent<CreatureEnvironmentTracker>();
     }
 
     void OnEnable()
@@ -107,6 +123,51 @@ public class CreatureAgent : MonoBehaviour
     }
     
     // 🎨 【新要素】マネージャーから色を受け取って適用する関数
+    public void SetLineage(LineageData newLineage)
+    {
+        if (newLineage == null)
+            return;
+
+        lineage = newLineage.CloneForChild();
+        lineageId = lineage.LineageId;
+        parentLineageId = lineage.parentLineageId;
+        lineageName = lineage.lineageName;
+        lineageColor = lineage.lineageColor;
+        if (lineageColor != Color.clear)
+            SetColors(lineageColor, currentFaceColor);
+
+        CreatureGenome genome = GetGenome();
+        if (genome != null)
+            ApplyLineageToGenome(genome);
+    }
+
+    private void ApplyLineageToGenome(CreatureGenome genome)
+    {
+        if (genome == null)
+            return;
+
+        genome.lineageId = lineageId;
+        genome.parentLineageId = parentLineageId;
+        genome.lineageName = lineageName;
+    }
+
+    public void ApplyDamage(float amount)
+    {
+        currentHP = Mathf.Max(0f, currentHP - Mathf.Max(0f, amount));
+        if (uiFollow != null) uiFollow.UpdateHPBar(currentHP);
+    }
+
+    public SavedCreatureData SaveToArchive(CreatureArchive archive, string displayName = null)
+    {
+        CreatureEvaluator evaluator = GetComponent<CreatureEvaluator>();
+        if (archive != null)
+            return archive.SaveRuntimeCreature(this, evaluator, displayName);
+
+        SavedCreatureData data = ScriptableObject.CreateInstance<SavedCreatureData>();
+        data.CaptureFromAgent(this, evaluator, displayName);
+        return data;
+    }
+
     public void SetColors(Color bodyColor, Color faceColor)
     {
         currentBodyArmColor = bodyColor;
@@ -280,6 +341,7 @@ public class CreatureAgent : MonoBehaviour
         int outputCount = joints.Length; 
         brain = new CreatureBrain(inputCount, outputCount, myGenome.hiddenNodeCount);
         brain.LoadGenome(myGenome);
+        ApplyLineageToGenome(brain.GetGenome());
     }
 
     public CreatureGenome GetGenome() => brain?.GetGenome();
@@ -439,6 +501,12 @@ public class CreatureAgent : MonoBehaviour
                     child.hiddenNodeCount = Mathf.Clamp(child.hiddenNodeCount - 1, config.minHiddenNodes, config.maxHiddenNodes);
             }
         }
+
+        if (Random.value < config.sightRangeChangeBase)
+            child.sightRange = Mathf.Clamp(child.sightRange + Random.Range(-0.5f, 0.5f), 2f, 15f);
+
+        if (Random.value < config.fieldOfViewChangeBase)
+            child.fieldOfViewAngle = Mathf.Clamp(child.fieldOfViewAngle + Random.Range(-10f, 10f), 30f, 180f);
 
         return child;
     }
