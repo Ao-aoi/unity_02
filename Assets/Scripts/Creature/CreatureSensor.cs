@@ -1,4 +1,6 @@
 using UnityEngine;
+using Neuro.Creature;
+using Neuro.Creature.Evaluation;
 
 public class CreatureSensor : MonoBehaviour
 {
@@ -97,15 +99,20 @@ public class CreatureSensor : MonoBehaviour
 
     void FindAndTrackClosestFood()
     {
-        GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
+        var foods = FoodRegistry.Foods;
         
         GameObject closestFood = null;
         float closestDistance = Mathf.Infinity;
         Vector3 currentPos = GetBodyCenterWorldPosition();
 
-        // 全てのエサの中から一番近くて、かつ「視界に入っているエサ」を探す
-        foreach (GameObject food in foods)
+        // 登録済みのエサの中から一番近くて、かつ「視界に入っているエサ」を探す
+        for (int i = 0; i < foods.Count; i++)
         {
+            FoodItem foodItem = foods[i];
+            if (foodItem == null)
+                continue;
+
+            GameObject food = foodItem.gameObject;
             Vector3 targetPos = food.transform.position;
             float dist = Vector3.Distance(targetPos, currentPos);
 

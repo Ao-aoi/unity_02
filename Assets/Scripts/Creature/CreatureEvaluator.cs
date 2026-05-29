@@ -1,5 +1,5 @@
+using Neuro.Creature.Evaluation;
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace Neuro.Creature
 {
@@ -8,122 +8,71 @@ namespace Neuro.Creature
         [Header("評価スコア")]
         public float totalFitness = 0f;
 
-        // 💡 マネージャーから渡される「この個体の評価ルール」
+        [Header("評価プロファイル")]
+        [Tooltip("複数のEvaluationRuleを組み合わせる新しい評価プロファイル。設定されていない場合は従来のcurrentCriteriaを使用します。")]
+        public EvaluationProfile evaluationProfile;
+
+        [Tooltip("従来互換用の評価ルール。既存シーンを壊さないため残しています。")]
         public EvaluationCriteria currentCriteria;
 
-        [Header("状態トラッキング")]
+        private readonly CompositeEvaluator compositeEvaluator = new CompositeEvaluator();
+        private CreatureEvaluationContext context;
+        private MovementStatistics movementStatistics;
+        private ExplorationTracker explorationTracker;
         private Vector3 spawnPosition;
-        private float previousDistanceToFood = Mathf.Infinity;
-        private GameObject currentTrackedFood = null;
         private Rigidbody2D bodyRb;
-        private Vector3 lastPosition;
-        private float stationaryTimer = 0f;
+        private CreatureAgent agent;
+        private float elapsedTime;
 
         void Start()
+        {
+            InitializeEvaluator();
+        }
+
+        public void InitializeEvaluator()
         {
             spawnPosition = transform.position;
             bodyRb = GetComponent<Rigidbody2D>();
             if (bodyRb == null) bodyRb = GetComponentInChildren<Rigidbody2D>();
-            
-            // ルールが渡されていなければ、デフォルトのルールを作成
-            if (currentCriteria == null) currentCriteria = new EvaluationCriteria();
+            agent = GetComponent<CreatureAgent>();
 
-            lastPosition = transform.position;
-            stationaryTimer = 0f;
+            if (currentCriteria == null && evaluationProfile == null)
+                currentCriteria = new EvaluationCriteria();
+
+            movementStatistics = new MovementStatistics();
+            movementStatistics.Initialize(transform.position, agent);
+            explorationTracker = new ExplorationTracker();
+            explorationTracker.Reset(transform.position);
+            context = new CreatureEvaluationContext(this, agent, transform, bodyRb, movementStatistics, explorationTracker, spawnPosition);
+
+            BuildRuntimes();
+            elapsedTime = 0f;
+        }
+
+        public void SetEvaluationProfile(EvaluationProfile profile)
+        {
+            evaluationProfile = profile;
+            if (context != null)
+                BuildRuntimes();
+        }
+
+        private void BuildRuntimes()
+        {
+            compositeEvaluator.Build(evaluationProfile, currentCriteria, context);
         }
 
         void Update()
         {
-            if (currentCriteria == null) return;
+            if (context == null)
+                InitializeEvaluator();
 
-            // 1. 生存ボーナス
-            totalFitness += currentCriteria.survivalRewardPerSec * Time.deltaTime;
+            float deltaTime = Time.deltaTime;
+            elapsedTime += deltaTime;
+            movementStatistics.Sample(transform.position, agent);
+            context.DeltaTime = deltaTime;
+            context.ElapsedTime = elapsedTime;
 
-            // 2. エサ探索の評価
-            if (currentCriteria.approachFoodReward > 0 || currentCriteria.escapeFoodPenalty > 0)
-            {
-                EvaluateFoodDistance();
-            }
-
-            // 3. スピード（横移動）の評価
-            if (currentCriteria.horizontalMoveReward > 0)
-            {
-                // 生まれた場所からのX軸の距離をスコアにする（遠くに行くほど高い）
-                float distanceX = Mathf.Abs(transform.position.x - spawnPosition.x);
-                totalFitness += distanceX * currentCriteria.horizontalMoveReward * Time.deltaTime;
-            }
-
-            // 4. ジャンプ（高さと滞空）の評価
-            if (currentCriteria.heightReward > 0)
-            {
-                // 生まれた場所より上にいる場合、その高さをスコアにする
-                float heightY = Mathf.Max(0, transform.position.y - spawnPosition.y);
-                totalFitness += heightY * currentCriteria.heightReward * Time.deltaTime;
-            }
-            
-            if (currentCriteria.airTimeReward > 0 && bodyRb != null)
-            {
-                // Y軸の速度がプラス（上昇中）か、下に落ちている最中なら滞空とみなす
-                if (Mathf.Abs(bodyRb.linearVelocity.y) > 0.1f) 
-                {
-                    totalFitness += currentCriteria.airTimeReward * Time.deltaTime;
-                }
-            }
-
-            // 5. 滞在（その場に留まる）ペナルティ
-            if (currentCriteria != null && currentCriteria.stationaryPenaltyPerSec > 0f)
-            {
-                float movedDist = Vector3.Distance(transform.position, lastPosition);
-                if (movedDist > currentCriteria.stationaryMovementEpsilon)
-                {
-                    stationaryTimer = 0f;
-                }
-                else
-                {
-                    stationaryTimer += Time.deltaTime;
-                    if (stationaryTimer > currentCriteria.stationaryThresholdSeconds)
-                    {
-                        totalFitness -= currentCriteria.stationaryPenaltyPerSec * Time.deltaTime;
-                    }
-                }
-                lastPosition = transform.position;
-            }
-        }
-
-        void EvaluateFoodDistance()
-        {
-            GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
-            GameObject closestFood = null;
-            float closestDistance = Mathf.Infinity;
-
-            foreach (GameObject food in foods)
-            {
-                float dist = Vector3.Distance(food.transform.position, transform.position);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    closestFood = food;
-                }
-            }
-
-            if (closestFood != null)
-            {
-                if (currentTrackedFood == closestFood && previousDistanceToFood != Mathf.Infinity)
-                {
-                    float deltaDistance = previousDistanceToFood - closestDistance;
-
-                    if (deltaDistance > 0)
-                    {
-                        totalFitness += deltaDistance * currentCriteria.approachFoodReward; 
-                    }
-                    else if (deltaDistance < 0)
-                    {
-                        totalFitness += deltaDistance * currentCriteria.escapeFoodPenalty; 
-                    }
-                }
-                currentTrackedFood = closestFood;
-                previousDistanceToFood = closestDistance;
-            }
+            totalFitness += compositeEvaluator.Tick(context);
         }
     }
 }

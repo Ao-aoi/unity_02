@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Neuro.Creature.Evaluation;
 using System.Collections.Generic;
 
 namespace Neuro.Creature{   
@@ -36,6 +37,13 @@ public class CreatureAgent : MonoBehaviour
     private CreatureSensor sensor;
 
     private float pendingEnergyConsumption = 0f;
+    private float totalEnergyConsumed = 0f;
+    private float totalHpConsumed = 0f;
+
+    public float CurrentHP => currentHP;
+    public float MaxHP => maxHP;
+    public float TotalEnergyConsumed => totalEnergyConsumed;
+    public float TotalHpConsumed => totalHpConsumed;
     [Header("突然変異設定")]
     [Tooltip("重み（ウェイト）変異の確率（0..1） - 高めで良い（例: 0.1）")]
     public float weightMutationRate = 0.1f;
@@ -80,6 +88,16 @@ public class CreatureAgent : MonoBehaviour
     void Awake()
     {
         sensor = GetComponent<CreatureSensor>();
+    }
+
+    void OnEnable()
+    {
+        CreatureRegistry.Register(this);
+    }
+
+    void OnDisable()
+    {
+        CreatureRegistry.Unregister(this);
     }
 
     public void SetupAgent(EcosystemManager ecosystemManager)
@@ -162,8 +180,12 @@ public class CreatureAgent : MonoBehaviour
         float satietyRatio = (maxSatiety > 0f) ? Mathf.Clamp01(currentSatiety / maxSatiety) : 0f;
         float consumptionMultiplier = 1f - satietyRatio * maxConsumptionReduction;
 
-        currentHP -= Time.deltaTime * hungerSpeed * consumptionMultiplier;
-        currentHP -= pendingEnergyConsumption * consumptionMultiplier;
+        float hungerConsumption = Time.deltaTime * hungerSpeed * consumptionMultiplier;
+        float movementConsumption = pendingEnergyConsumption * consumptionMultiplier;
+        currentHP -= hungerConsumption;
+        currentHP -= movementConsumption;
+        totalHpConsumed += hungerConsumption + movementConsumption;
+        totalEnergyConsumed += movementConsumption;
         pendingEnergyConsumption = 0f; 
 
         if (currentSatiety > 0f)

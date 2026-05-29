@@ -1,8 +1,19 @@
 using UnityEngine;
+using Neuro.Creature.Evaluation;
 
 namespace Neuro.Creature{
 public class FoodItem : MonoBehaviour
 {
+    void OnEnable()
+    {
+        FoodRegistry.Register(this);
+    }
+
+    void OnDisable()
+    {
+        FoodRegistry.Unregister(this);
+    }
+
     [Header("エサの設定")]
     public float healAmount = 40f;
     public GameObject eatEffectPrefab; // 食べた時のパーティクル演出（あれば）
