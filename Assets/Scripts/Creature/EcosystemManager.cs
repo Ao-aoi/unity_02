@@ -12,7 +12,6 @@ public class EcosystemManager : MonoBehaviour
     public class SpawnPointConfig
     {
         public Transform pointTransform; // スポーンする場所
-        public EvaluationCriteria pointCriteria; // この場所から生まれる個体に適用する従来ルール
         public EvaluationProfile pointEvaluationProfile; // 複数ルールを組み合わせる新評価プロファイル
         [Tooltip("このスポーンポイントで常に維持する個体数。0以下ならマネージャーの初期生成数を使う")] public int creatureCount = -1;
         
@@ -133,8 +132,6 @@ public class EcosystemManager : MonoBehaviour
             {
                 if (chosenSpawn.pointEvaluationProfile != null)
                     evaluator.evaluationProfile = chosenSpawn.pointEvaluationProfile;
-                if (chosenSpawn.pointCriteria != null)
-                    evaluator.currentCriteria = chosenSpawn.pointCriteria;
             }
 
             Slider sliderComponent = agent.InitializeUIFollow(sliderCanvas);
@@ -214,6 +211,77 @@ public class EcosystemManager : MonoBehaviour
             return Mathf.Max(0, maxCreaturesCount);
 
         return spawnPoint.creatureCount;
+    }
+
+    private EvaluationProfile BuildProfileFromCriteria(EvaluationCriteria criteria)
+    {
+        var profile = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.EvaluationProfile>();
+        profile.profileName = (criteria != null && !string.IsNullOrEmpty(criteria.criteriaName)) ? criteria.criteriaName + " (migrated)" : "Migrated Profile";
+        profile.description = "Runtime-generated profile converted from legacy EvaluationCriteria.";
+
+        if (criteria == null)
+            return profile;
+
+        // Survival
+        if (criteria.survivalRewardPerSec != 0f)
+        {
+            var survival = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.SurvivalRule>();
+            survival.enabled = true;
+            survival.weight = 1f;
+            survival.rewardMultiplier = 1f;
+            survival.rewardPerSecond = criteria.survivalRewardPerSec;
+            profile.rules.Add(survival);
+        }
+
+        // Food approach / escape
+        if (criteria.approachFoodReward != 0f || criteria.escapeFoodPenalty != 0f)
+        {
+            var food = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.FoodApproachRule>();
+            food.enabled = true;
+            food.weight = 1f;
+            food.rewardMultiplier = 1f;
+            food.approachFoodReward = criteria.approachFoodReward;
+            food.escapeFoodPenalty = criteria.escapeFoodPenalty;
+            profile.rules.Add(food);
+        }
+
+        // Horizontal movement
+        if (criteria.horizontalMoveReward != 0f)
+        {
+            var horiz = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.HorizontalMovementRule>();
+            horiz.enabled = true;
+            horiz.weight = 1f;
+            horiz.rewardMultiplier = 1f;
+            horiz.rewardPerDistanceSecond = criteria.horizontalMoveReward;
+            profile.rules.Add(horiz);
+        }
+
+        // Height and air time
+        if (criteria.heightReward != 0f || criteria.airTimeReward != 0f)
+        {
+            var height = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.HeightAirTimeRule>();
+            height.enabled = true;
+            height.weight = 1f;
+            height.rewardMultiplier = 1f;
+            height.heightReward = criteria.heightReward;
+            height.airTimeReward = criteria.airTimeReward;
+            profile.rules.Add(height);
+        }
+
+        // Stationary penalty
+        if (criteria.stationaryPenaltyPerSec != 0f)
+        {
+            var stat = ScriptableObject.CreateInstance<Neuro.Creature.Evaluation.StationaryPenaltyRule>();
+            stat.enabled = true;
+            stat.weight = 1f;
+            stat.rewardMultiplier = 1f;
+            stat.penaltyPerSecond = criteria.stationaryPenaltyPerSec;
+            stat.thresholdSeconds = criteria.stationaryThresholdSeconds;
+            stat.movementEpsilon = criteria.stationaryMovementEpsilon;
+            profile.rules.Add(stat);
+        }
+
+        return profile;
     }
 }
 }
