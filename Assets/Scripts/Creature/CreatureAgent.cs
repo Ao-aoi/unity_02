@@ -42,6 +42,7 @@ public class CreatureAgent : MonoBehaviour
 
     public float CurrentHP => currentHP;
     public float MaxHP => maxHP;
+    public float CurrentSatiety => currentSatiety;
     public float TotalEnergyConsumed => totalEnergyConsumed;
     public float TotalHpConsumed => totalHpConsumed;
     [Header("突然変異設定")]

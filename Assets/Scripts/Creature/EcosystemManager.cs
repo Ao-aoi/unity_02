@@ -154,7 +154,7 @@ public class EcosystemManager : MonoBehaviour
 
             CreatureDied?.Invoke(finalFitness);
 
-            Debug.Log($"個体が死亡。スコア: {finalFitness}");
+            // Debug.Log($"個体が死亡。スコア: {finalFitness}");
 
             if (deadGenome != null)
             {
