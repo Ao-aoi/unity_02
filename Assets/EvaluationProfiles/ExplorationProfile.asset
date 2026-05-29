@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 838b42dbb48648eb9310b55d737bd237, type: 3}
+  m_Name: 探索型
+  m_EditorClassIdentifier: 
+  profileName: 探索型
+  description: 未探索セル、好奇心ターゲット、エサ接近を重視し、同じ場所への滞在を減点します。
+  rules:
+  - {fileID: 11400000, guid: 7212ba49ea694b34830c522bb5e5a696, type: 2}
+  - {fileID: 11400000, guid: e943b583f8624a4aa3b25752fa574a8c, type: 2}
+  - {fileID: 11400000, guid: fe5ad5b58e55454eb3253c0ee733a5a5, type: 2}
+  - {fileID: 11400000, guid: 102bc9495de949faa876c1897de4a8dd, type: 2}
+  - {fileID: 11400000, guid: 62c0044548ff44edbd0c77031afaba6d, type: 2}

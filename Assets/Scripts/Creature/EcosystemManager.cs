@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
+using Neuro.Creature.Evaluation;
 
 namespace Neuro.Creature{
 public class EcosystemManager : MonoBehaviour
@@ -11,7 +12,8 @@ public class EcosystemManager : MonoBehaviour
     public class SpawnPointConfig
     {
         public Transform pointTransform; // スポーンする場所
-        public EvaluationCriteria pointCriteria; // この場所から生まれる個体に適用するルール
+        public EvaluationCriteria pointCriteria; // この場所から生まれる個体に適用する従来ルール
+        public EvaluationProfile pointEvaluationProfile; // 複数ルールを組み合わせる新評価プロファイル
         [Tooltip("このスポーンポイントで常に維持する個体数。0以下ならマネージャーの初期生成数を使う")] public int creatureCount = -1;
         
         [Header("見た目の設定")]
@@ -127,9 +129,12 @@ public class EcosystemManager : MonoBehaviour
             agent.InitializeBrain(parentGenome);
 
             CreatureEvaluator evaluator = newCreature.GetComponent<CreatureEvaluator>();
-            if (evaluator != null && chosenSpawn != null && chosenSpawn.pointCriteria != null)
+            if (evaluator != null && chosenSpawn != null)
             {
-                evaluator.currentCriteria = chosenSpawn.pointCriteria;
+                if (chosenSpawn.pointEvaluationProfile != null)
+                    evaluator.evaluationProfile = chosenSpawn.pointEvaluationProfile;
+                if (chosenSpawn.pointCriteria != null)
+                    evaluator.currentCriteria = chosenSpawn.pointCriteria;
             }
 
             Slider sliderComponent = agent.InitializeUIFollow(sliderCanvas);

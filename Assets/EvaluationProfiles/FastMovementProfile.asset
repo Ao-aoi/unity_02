@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 838b42dbb48648eb9310b55d737bd237, type: 3}
+  m_Name: 高速移動型
+  m_EditorClassIdentifier: 
+  profileName: 高速移動型
+  description: 横方向の移動距離、地形突破、移動/HP効率、最低限の安定性を重視します。
+  rules:
+  - {fileID: 11400000, guid: 9c699455d9db4804a20db720568dba16, type: 2}
+  - {fileID: 11400000, guid: 91a6f548a9214cdba3992ef957c59e74, type: 2}
+  - {fileID: 11400000, guid: 51b63322b4c446919b592abe71e85548, type: 2}
+  - {fileID: 11400000, guid: 28f4bda375ec4fb2bf8c767d11db5089, type: 2}
+  - {fileID: 11400000, guid: c65df4c62345401fbd14942e5ac258b1, type: 2}
+  - {fileID: 11400000, guid: 6f4593d229ee446c87899b87964123cd, type: 2}
