@@ -20,8 +20,8 @@ namespace Neuro.Creature.Environment
             Rigidbody2D body = other.attachedRigidbody;
             if (body != null && !originalDrag.ContainsKey(body))
             {
-                originalDrag.Add(body, body.drag);
-                body.drag *= dragMultiplier;
+                originalDrag.Add(body, body.linearDamping);
+                body.linearDamping *= dragMultiplier;
             }
         }
 
@@ -31,7 +31,7 @@ namespace Neuro.Creature.Environment
             Rigidbody2D body = other.attachedRigidbody;
             if (body != null && originalDrag.ContainsKey(body))
             {
-                body.drag = originalDrag[body];
+                body.linearDamping = originalDrag[body];
                 originalDrag.Remove(body);
             }
         }

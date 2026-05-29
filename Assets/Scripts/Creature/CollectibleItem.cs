@@ -15,15 +15,12 @@ namespace Neuro.Creature
 
         [Header("アンロック設定")]
         [Tooltip("このアイテムを拾った時にプレイヤーが獲得（アンロック）する新しい評価ルールを割り当てます")]
-        public ScriptableObject unlockableRule; // EvaluationRule などがセットされます
         public UnlockableEvaluationRule unlockableEvaluationRule;
         public EvaluationInventory targetInventory;
 
         [Header("演出")]
         public GameObject collectEffectPrefab;
 
-        // 📢 プレイヤー（マネージャー）に「新しいルールがアンロックされたぞ！」と知らせるグローバルイベント
-        public static event Action<ScriptableObject> OnRuleUnlocked;
 
         void OnTriggerEnter2D(Collider2D other)
         {
@@ -32,12 +29,6 @@ namespace Neuro.Creature
 
             if (agent != null)
             {
-                // 2. もしアンロック対象のルールが設定されていれば、プレイヤーのインベントリに通知を飛ばす！
-                if (unlockableRule != null)
-                {
-                    OnRuleUnlocked?.Invoke(unlockableRule);
-                }
-
                 if (unlockableEvaluationRule != null)
                 {
                     EvaluationInventory inventory = targetInventory != null ? targetInventory : EvaluationInventoryProvider.ActiveInventory;
