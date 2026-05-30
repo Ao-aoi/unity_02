@@ -123,5 +123,15 @@ public class CreatureUIFollow : MonoBehaviour
             hpSlider.value = currentHP;
         }
     }
+
+    public void DestroyHPBar()
+    {
+        if (hpSlider != null)
+        {
+            Destroy(hpSlider.gameObject);
+            hpSlider = null;
+            hpSliderCanvasGroup = null;
+        }
+    }
 }
 }

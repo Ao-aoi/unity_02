@@ -8,6 +8,8 @@ using System.Collections.Generic;
 namespace Neuro.Creature{   
 public class CreatureAgent : MonoBehaviour
 {
+    public event System.Action<CreatureAgent, CreatureGenome, float> Died;
+
     [Header("ステータス")]
     public float maxHP = 100f;
     private float currentHP;
@@ -34,7 +36,8 @@ public class CreatureAgent : MonoBehaviour
 
     private HingeJoint2D[] joints;
     private float[] prevJointAngles;
-    private EcosystemManager manager;
+    private bool isDying;
+    private CustomSpawnPoint originSpawnPoint;
     private CreatureBrain brain;
     private CreatureSensor sensor;
 
@@ -89,9 +92,6 @@ public class CreatureAgent : MonoBehaviour
     // 現在の血統の色を記憶しておく変数
     [HideInInspector] public Color currentBodyArmColor = Color.white;
     [HideInInspector] public Color currentFaceColor = Color.white;
-    // どのスポーンポイントから生まれたか（EcosystemManager がセットする）
-    [HideInInspector] public int originSpawnIndex = -1;
-
     [Header("系統情報")]
     [SerializeField] private LineageData lineage = new LineageData("Wild Lineage", Color.white);
     public string lineageId;
@@ -117,11 +117,11 @@ public class CreatureAgent : MonoBehaviour
         CreatureRegistry.Unregister(this);
     }
 
-    public void SetupAgent(EcosystemManager ecosystemManager)
+    public void SetOriginSpawnPoint(CustomSpawnPoint spawnPoint)
     {
-        manager = ecosystemManager;
+        originSpawnPoint = spawnPoint;
     }
-    
+
     // 🎨 【新要素】マネージャーから色を受け取って適用する関数
     public void SetLineage(LineageData newLineage)
     {
@@ -257,9 +257,32 @@ public class CreatureAgent : MonoBehaviour
 
         if (currentHP <= 0)
         {
-            if (manager != null) manager.OnCreatureDied(this.gameObject);
-            else Destroy(gameObject);
+            Die();
         }
+    }
+
+    private void Die()
+    {
+        if (isDying)
+            return;
+
+        isDying = true;
+
+        if (uiFollow != null)
+            uiFollow.DestroyHPBar();
+
+        CreatureGenome deadGenome = GetGenome();
+        float finalFitness = 0f;
+        CreatureEvaluator evaluator = GetComponent<CreatureEvaluator>();
+        if (evaluator != null)
+            finalFitness = evaluator.totalFitness;
+
+        EcosystemManager.ReportCreatureDied(finalFitness);
+
+        if (originSpawnPoint != null)
+            Died?.Invoke(this, deadGenome, finalFitness);
+
+        Destroy(gameObject);
     }
 
     public void InitializeBrain(CreatureGenome inheritedGenome = null)
