@@ -27,6 +27,17 @@ public class CreatureSensor : MonoBehaviour
     public GameObject ClosestFood { get; private set; }
     public float DistanceToClosestFood { get; private set; } = 1f;
     public Vector2 DirToClosestFood { get; private set; } = Vector2.up;
+    // 環境ギミック（ゾーン）検知用データ
+    [HideInInspector] public Vector2 dirToClosestEnvironment = Vector2.zero;
+    [HideInInspector] public float distanceToClosestEnvironment = 1f;
+    public GameObject ClosestEnvironmentZone { get; private set; }
+    public float DistanceToClosestEnvironment { get; private set; } = 1f;
+    public Vector2 DirToClosestEnvironment { get; private set; } = Vector2.up;
+    [Header("セクター式環境センサー")]
+    [Tooltip("視界を分割するセクター数（例:8）")]
+    public int sectorCount = 8;
+    // 各セクターごとの正規化距離（0=近い, 1=視界外/未検出）
+    [HideInInspector] public float[] sectorEnvironmentDistances;
     private Rigidbody2D[] childRigidbodies;
     private float sensorUpdateTimer;
     private float effectiveSensorUpdateInterval;
@@ -37,14 +48,24 @@ public class CreatureSensor : MonoBehaviour
         RefreshUpdateInterval();
     }
 
-    void OnValidate()
-    {
-        RefreshUpdateInterval();
-    }
-
     void Start()
     {
         FindAndTrackClosestFood();
+        EnsureSectorArray();
+    }
+
+    void OnValidate()
+    {
+        RefreshUpdateInterval();
+        EnsureSectorArray();
+    }
+
+    private void EnsureSectorArray()
+    {
+        int count = Mathf.Max(1, sectorCount);
+        if (sectorEnvironmentDistances == null || sectorEnvironmentDistances.Length != count)
+            sectorEnvironmentDistances = new float[count];
+        for (int i = 0; i < sectorEnvironmentDistances.Length; i++) sectorEnvironmentDistances[i] = 1f;
     }
 
     private Vector3 GetBodyCenterWorldPosition()
@@ -84,6 +105,10 @@ public class CreatureSensor : MonoBehaviour
         {
             // 1. 最も近いエサを探して、視界内ならロックオン線を描く
             FindAndTrackClosestFood();
+            // 追加: 視界内の最も近い環境ゾーンを探す（後方互換）
+            FindAndTrackClosestEnvironmentZone();
+            // 追加: セクターごとの環境検出を行う
+            SampleEnvironmentSectors();
             sensorUpdateTimer %= effectiveSensorUpdateInterval;
         }
 
@@ -166,6 +191,89 @@ public class CreatureSensor : MonoBehaviour
             {
                 lockOnLineRenderer.positionCount = 0; // 点の数を0にすると線が消える
             }
+        }
+    }
+
+    // 視界内にある最も近い EnvironmentZone を探して情報を更新する
+    void FindAndTrackClosestEnvironmentZone()
+    {
+        // EnvironmentZone は namespace にあるため完全修飾名で取得
+        var zones = UnityEngine.Object.FindObjectsByType<Neuro.Creature.Environment.EnvironmentZone>(FindObjectsSortMode.None);
+
+        GameObject closestZone = null;
+        float closestDistance = Mathf.Infinity;
+        Vector3 currentPos = GetBodyCenterWorldPosition();
+
+        for (int i = 0; i < zones.Length; i++)
+        {
+            var zone = zones[i];
+            if (zone == null) continue;
+
+            Vector3 targetPos = zone.transform.position;
+            float dist = Vector3.Distance(targetPos, currentPos);
+
+            if (dist <= sightRange && dist < closestDistance)
+            {
+                Vector3 dirToTarget = (targetPos - currentPos).normalized;
+                float angleToTarget = Vector3.Angle(transform.up, dirToTarget);
+
+                if (angleToTarget <= fieldOfViewAngle / 2f)
+                {
+                    closestDistance = dist;
+                    closestZone = zone.gameObject;
+                }
+            }
+        }
+
+        if (closestZone != null)
+        {
+            Vector3 directionWorld = (closestZone.transform.position - currentPos).normalized;
+
+            dirToClosestEnvironment.x = Vector3.Dot(directionWorld, transform.right);
+            dirToClosestEnvironment.y = Vector3.Dot(directionWorld, transform.up);
+            distanceToClosestEnvironment = Mathf.Clamp01(closestDistance / sightRange);
+            ClosestEnvironmentZone = closestZone;
+            DistanceToClosestEnvironment = distanceToClosestEnvironment;
+            DirToClosestEnvironment = dirToClosestEnvironment;
+        }
+        else
+        {
+            ClosestEnvironmentZone = null;
+            DistanceToClosestEnvironment = 1f;
+            DirToClosestEnvironment = Vector2.up;
+        }
+    }
+
+    // セクターごとにレイキャストを飛ばして環境ゾーンの距離を記録する
+    void SampleEnvironmentSectors()
+    {
+        EnsureSectorArray();
+        Vector3 currentPos = GetBodyCenterWorldPosition();
+
+        float halfFov = fieldOfViewAngle / 2f;
+        int count = sectorEnvironmentDistances.Length;
+
+        for (int i = 0; i < count; i++)
+        {
+            // セクター中心角（-halfFov .. +halfFov）
+            float t = (count == 1) ? 0.5f : (i + 0.5f) / count;
+            float sectorAngle = Mathf.Lerp(-halfFov, halfFov, t);
+            Quaternion rot = Quaternion.AngleAxis(sectorAngle, Vector3.forward);
+            Vector3 dir = rot * transform.up;
+
+            RaycastHit2D hit = Physics2D.Raycast(currentPos, dir, sightRange);
+            if (hit.collider != null)
+            {
+                var zone = hit.collider.GetComponentInParent<Neuro.Creature.Environment.EnvironmentZone>();
+                if (zone != null)
+                {
+                    sectorEnvironmentDistances[i] = Mathf.Clamp01(hit.distance / sightRange);
+                    continue;
+                }
+            }
+
+            // ヒットなしまたは環境ゾーンでない場合は 1f（未検出）
+            sectorEnvironmentDistances[i] = 1f;
         }
     }
 

@@ -17,7 +17,7 @@ namespace Neuro.Creature.Environment
         {
             base.OnTriggerStay2D(other);
             CreatureAgent agent = other.GetComponentInParent<CreatureAgent>();
-            if (agent != null && damagePerSecond > 0f)
+            if (agent != null && damagePerSecond != 0f)
                 agent.ApplyDamage(damagePerSecond * Time.deltaTime);
         }
     }

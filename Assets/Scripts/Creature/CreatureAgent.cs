@@ -153,7 +153,7 @@ public class CreatureAgent : MonoBehaviour
 
     public void ApplyDamage(float amount)
     {
-        currentHP = Mathf.Max(0f, currentHP - Mathf.Max(0f, amount));
+        currentHP = Mathf.Clamp(currentHP - amount, 0f, maxHP);
         if (uiFollow != null) uiFollow.UpdateHPBar(currentHP);
     }
 
@@ -201,12 +201,27 @@ public class CreatureAgent : MonoBehaviour
 
         if (brain != null && sensor != null && joints != null)
         {
-            float[] inputs = new float[5];
-            inputs[0] = sensor.dirToClosestFood.x;      
-            inputs[1] = sensor.dirToClosestFood.y;      
-            inputs[2] = sensor.distanceToClosestFood;   
-            inputs[3] = transform.up.x;                 
-            inputs[4] = transform.up.y;                 
+            int sectorCount = (sensor != null) ? Mathf.Max(1, sensor.sectorCount) : 8;
+            int totalInputs = 3 + sectorCount + 2; // food(x,y,d) + sectors + forward(x,y)
+            float[] inputs = new float[totalInputs];
+            int idx = 0;
+            inputs[idx++] = sensor.dirToClosestFood.x;
+            inputs[idx++] = sensor.dirToClosestFood.y;
+            inputs[idx++] = sensor.distanceToClosestFood;
+
+            // セクター距離を順に埋める（見つからない = 1f）
+            if (sensor.sectorEnvironmentDistances != null)
+            {
+                for (int s = 0; s < sectorCount && s < sensor.sectorEnvironmentDistances.Length; s++)
+                    inputs[idx++] = sensor.sectorEnvironmentDistances[s];
+            }
+            else
+            {
+                for (int s = 0; s < sectorCount; s++) inputs[idx++] = 1f;
+            }
+
+            inputs[idx++] = transform.up.x;
+            inputs[idx++] = transform.up.y;
 
             float[] outputs = brain.Evaluate(inputs);
 
@@ -294,7 +309,9 @@ public class CreatureAgent : MonoBehaviour
         CreatureGenome myGenome = inheritedGenome;
         if (myGenome == null)
         {
-            int initialExpectedWeights = (5 * 12) + (12 * 4); 
+            int sensorSectors = (sensor != null) ? Mathf.Max(1, sensor.sectorCount) : 8;
+            int initialInputCount = 3 + sensorSectors + 2; // food(x,y,d) + sector distances + forward(x,y)
+            int initialExpectedWeights = (initialInputCount * 12) + (12 * 4);
             myGenome = new CreatureGenome(initialExpectedWeights);
         }
 
@@ -360,7 +377,7 @@ public class CreatureAgent : MonoBehaviour
                 prevJointAngles[i] = joints[i] != null ? joints[i].jointAngle : 0f;
         }
 
-        int inputCount = 5;            
+        int inputCount = 3 + ((sensor != null) ? Mathf.Max(1, sensor.sectorCount) : 8) + 2;            
         int outputCount = joints.Length; 
         brain = new CreatureBrain(inputCount, outputCount, myGenome.hiddenNodeCount);
         brain.LoadGenome(myGenome);
@@ -454,7 +471,7 @@ public class CreatureAgent : MonoBehaviour
 
         currentGenome.hiddenNodeCount += 2; 
 
-        int inputCount = 5;
+        int inputCount = 3 + ((sensor != null) ? Mathf.Max(1, sensor.sectorCount) : 8) + 2;
         int outputCount = (joints != null) ? joints.Length : 0;
 
         brain = new CreatureBrain(inputCount, outputCount, currentGenome.hiddenNodeCount);
